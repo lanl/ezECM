@@ -1,0 +1,401 @@
+---
+title: "BayesECM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{BayesECM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ezECM)
+```
+
+The purpose of this vignette is to walk the user through the workflow and results from categorizing data with a Bayesian ECM model.  The intended workflow for a BayesECM event categorization is as follows:
+
+1.  Load data from known events to use as training data.
+2.  Fit a `BayesECM` model to the training data.
+3.  Save the `BayesECM` model for later use, this allows for faster categorization of unknown events to be collected in the future.
+4.  Observe (an) unknown event(s), organize the collected data and load it into the `R` session
+5.  Load the previously fit `BayesECM` model
+6.  Feed the model fit and the new data into `predict.BayesECM()` to obtain categorization estimates for the new data
+7.  Analyze the categorization estimates
+
+# Loading Data
+
+p-values are loaded into the `R` global environment using the `import_pvals()` function supplied by the `ezECM` package.
+
+```{r}
+csv_use <- "good_training.csv"
+file_path <- system.file("extdata", csv_use, package = "ezECM")
+training_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
+```
+
+`BayesECM()` can handle when the training data is missing entries.  The loaded `data.frame`, named `training_data`, does not contain missing entries, so let's delete some of them for the example.  The code below ensures at least one of the discriminants is available for each event.
+
+```{r}
+set.seed(1)
+s1 <- sample(1:nrow(training_data), size = 25)
+training_data[s1,1] <- NA
+s2 <- sample((1:nrow(training_data))[-s1], size = 20)
+training_data[s2,2] <- NA
+s3 <- sample(1:nrow(training_data), size = 35)
+training_data[s3,3] <- NA
+
+```
+
+Inspecting the `training_data`:
+
+```{r}
+training_data
+```
+
+# Fitting a `BayesECM` Model
+
+With the training data in the `R` environment, the next step is to train the `BayesECM` model.  Training consists of organizing the data, pre-computing some values for prediction, incorporating the supplied values of prior parameters, and imputing any data that is missing.  Because `training_data` has missing values, Markov chain Monte Carlo methods will be used to impute these missing values. 
+
+# Old Stuff
+
+
+Before we use the `BayesECM()` function, lets talk about incorporating scientific information we know before observing the data, or *a-priori* information.  We can incorporate this known scientific information into our inference.  However, the larger the training data set used, the less influence the prior parameters have on the outcome, and therefore if a large data set is used one should not worry to much about changing the prior parameters.  
+
+To do so, we can adjust the prior mean value for the p-values, given the information we know.  First, the `p.depth` discriminant is calculated using a null hypothesis of a shallow depth.  Earthquakes can be either deep or shallow, while explosions can only be shallow.  Therefore, earthquakes can have a small p-value or a large p-value, and we would expect the mean p-value for earthquakes to be smaller than the mean p-value for explosions.  Therefore, we can reasonably shift the priors on the mean p-values as such.  Note, when specifying different prior means for each category, this must be provided in in a `data.frame`, with columns corresponding to the event category and rows in the same order as the discriminant columns in the training data.
+
+```{r}
+prior_means <- data.frame(matrix(NA, ncol = 2, nrow = 3))
+names(prior_means) <- c("earthquake", "explosion")
+prior_means$explosion[1] <- 0.75
+prior_means$earthquake[1] <- 0.25
+```
+
+For the `p.polarity` discriminant, based on the direction of the first polarity of motion, we expect similar behavior.  However, the mean p-value should be even lower for the `earthquake` discriminant since this discriminant is usually strong evidence.  `p.polarity` is calculated with a null hypothesis of an explosion.
+
+```{r}
+prior_means$explosion[2] <- 0.75
+prior_means$earthquake[2] <- 0.05
+```
+
+We know that the discirminant `p.useless` is useless.  `p.useless` is actually randomly generated uniform numbers between 0 an 1 included to try to confound the categorization algorithm.  The mean p-value should be 0.5 for each category.
+
+```{r}
+prior_means[3,] <- 0.5
+```
+
+Last, but certainly not least, `BayesECM()` requires that the prior mean is specified as a logit transform of the p-value.  Therefore, we have to do this transformation before running the function.
+
+```{r}
+prior_means <- log(prior_means) - log(1-prior_means)
+```
+
+The remaining `BayesECM()` function arguments require the input of training data, as well as a choice for the number of Markov-Chain Monte-Carlo iterations to run.  
+
+Under the hood, the function approximates an integral by repeatedly drawing values for model parameters conditional on the previous draw for all other model parameters, similar how one may repeatedly *draw* coin flips from a Bernoulli distribution.  The **T**otal number of *draws* for each model parameter is equivalent to the second element of the `BT` argument.  A larger **T**otal number of draws allows for better *mixing* for the algorithm and reduces the Monte-Carlo variance, at the expense of computation time and memory requirements.  When starting the algorithm, some initializing values are used, and after a while the algorithm converges to appropriate values.  A set of initial draws is thrown away as **B**urn-in.  The number of **B**urn-in draws that will be thrown away within `BayesECM` are stipulated by the first element of the `BT` argument.
+
+Burn-in and number of total draws to choose is a balance between requirements based on problem complexity, and computational resources.  Here, we can choose `BT = c(1000, 40000)`.  If you would like to watch the progress to understand how much longer fitting the model will take, include `verb = TRUE` in the function arguments.
+
+```{r}
+BayesECM_fit <- BayesECM(Y = training_data, BT = c(1000, 40000))
+```
+
+To save the fit for later use, so that categorizing new data requires less computation time, the following code can be used to save the object to the local directory.
+
+```{r eval = FALSE}
+export_ecm(x = BayesECM_fit, file = "BayesECMfit.rda")
+```
+
+# Loading New Data
+
+Sometime later, an event of interest is observed.  p-values are calculated for each discriminant, and the data is collected in a `*.csv` file.  The file can then be loaded into the R session using the `import_pvals()` function.
+
+```{r}
+csv_use <- "good_newdata.csv"
+file_path <- system.file("extdata", csv_use, package = "ezECM")
+newdata <- import_pvals(file = file_path, header = TRUE, sep = ",", training = FALSE)
+```
+
+Inspecting the data we can see that some missing data has the `NA` place-holder.  Because the data is from a simulation, the true event is known.
+
+```{r}
+newdata
+```
+
+We can put the `event` column to the side for now to check the accuracy of the results.
+
+```{r}
+newdata_truth <- newdata$event
+newdata$event <- NULL
+newdata[9,2:3] <- NA
+
+```
+
+# Loading a Previous `BayesECM` Model
+
+You may have quit RStudio or restarted your computer before running the initial model.  It will take less time to load the previously fit model back into the `R` global environment, than to reuse the `BayesECM` function.  Specifying the file path, the previously fit model can be loaded as such:
+
+```{r eval = FALSE}
+BayesECM_fit <- import_ecm(x = "BayesECMfit.rda")
+```
+
+# Categorizing Unlabled Data
+
+The variable `BayesECM_fit` is a `BayesECM` object within the `R` environment.  The `predict()` function is used to predict the category for each unlabeled event.  In order to reduce computation time, `thinning` is set to `2`.  This choice means that every other parameter draw will be used, `r length(seq(from = 1000, to = 40000, by = 2))` in total.  There are some benefits to drawing a larger number of Monte Carlo samples during training, and then reducing the number of samples used in prediction through thinning, when compared to drawing a smaller number of Monte Carlo samples during training.
+
+```{r}
+cat_pred <- predict(object = BayesECM_fit, Ytilde = newdata, thinning = 2)
+```
+
+Running this code only took a few seconds.  Remember, for each unlabeled event there is some probability that the event belongs in one of the two event categories.  There is uncertainty in these probabilities, and `cat_pred` contains samples from the distribution of these probabilities.  The expected probability that each unlabeled event belongs to each category can easily be viewed with `summary()`.
+
+# Analysis of the Results
+
+
+The output from `BayesECM.predict()` can be used to easily plot the results for a specified event.  The argument `index` specifies the event contained in row number of `newdata` the user wants to plot.
+
+```{r}
+plot(x = cat_pred, index = 5)
+```
+
+The category labels in the legend are originally taken from the `event` column used in the training data.  Plotting again, using the `cat_labels` argument, we can capitalize (or completely change) the text in the legend without manipulating the data structure.
+
+```{r}
+plot(x = cat_pred, index = 5, cat_labels = c("Earthquake", "Explosion"))
+```
+
+We can see from these results that for the event corresponding to the second row of `newdata`, we expect there is a 63\% chance the event is an explosion.  However, there is some uncertainty in the results.  Since the data used was simulated, we can check the truth:
+
+```{r}
+newdata_truth[5]
+```
+
+Looking at the data can provide some insight as to why this categorization had uncertainty. The p-value for event depth is not in a rejection region, however the value becoming fairly low.  Likely the more important issue is that `p.polarity` is missing.  `BayesECM()` may have a more difficult time distinguishing between the two categories when `p.polarity` is missing, which is reflected in the variance of the distributions.
+
+```{r}
+newdata[5,]
+```
+In comparison, plotting the ninth unlabeled data point, by setting `index = 1`, shows a more decisive result:
+
+```{r}
+plot(x = cat_pred, index = 1, cat_labels = c("Earthquake", "Explosion"))
+```
+
+Inspecting the data for this event
+
+```{r}
+newdata[1,]
+```
+and peeking at the truth
+
+```{r}
+newdata_truth[1]
+```
+
+shows an explosion with all the discriminants provided.  `p.depth` is still fairly far from a rejection region, and similarly `p.polarity` is fairly large.
+
+Plotting one more:
+
+```{r}
+used <- 9
+plot(x = cat_pred, index = used, cat_labels = c("Earthquake", "Explosion"))
+newdata_truth[used]
+```
+
+We see a mis-cagegorization of an earthquake.  However, the high uncertainties in the distributions should be a cause of concern.  Whether or not unlabeled event number 9 would be categorized as an earthquake or explosion would depend on how one would make such a decision, given the inference obtained from the statistical framework.
+
+# Decision Theory for Categorization
+
+Given the samples used to generate the plots in the previous section, as well as the plots themselves, one could make a decision on how to categorize an unlabled event.  For example, one might choose to categorize an event as category $i$ if $\mathbb{E}[p(z_i)] > 0.8$.  However, such a choice is somewhat arbitrary.  Having a well defined methodology which can lead to such reasoning is better suited to consistent categorization.
+
+For a consistent methodology, first outline the problem.  If we want to determine if the unlabled event is an explosion, we can take the action to categorize it as either $\mathrm{H}_1 = \mathrm{explosion}$ or $\mathrm{H}_2 = \mathrm{not \ explosion}$.  The categorization is dependent on the true value of variables $z_1, z_2 \in \{0,1\}$, which indicate which distribution the unlabled data belongs to.  If $z_1 = 1$ and $\mathrm{H}_1$ is selected, this is a win, as the unlabled point was categorized correctly.  The same goes for $z_2 = 1$ and $\mathrm{H}_2$.  The undesirable possibilities are that $z_1 = 1$ and $\mathrm{H}_2$ is selected, and $z_2 = 1$ and $\mathrm{H}_1$ is selected.
+
+We can consider the loss matrix for all four possibilities:
+
+
+$$
+\begin{array}{cc@{}cc}
+\phantom{XX} & \phantom{XX} & \phantom{XX} & \mathrm{Action}\\
+\phantom{XX} & \phantom{XX} & \phantom{XX} & \begin{array}{cc}
+\mathrm{H}_1 & \mathrm{H}_2
+\end{array}\\
+K = &
+\begin{array}{c}
+\mathrm{True}\\
+\mathrm{Category}
+\end{array} \hspace{-1.5em}&
+\begin{array}{c}
+Z_1 \\
+Z_2
+\end{array} \hspace{-2em}& \left[\begin{array}{c|c}
+K_{1,1} & K_{1,2}\\
+\hline
+K_{2,1} & K_{2,2}
+\end{array}\right]
+\end{array}
+$$
+
+
+
+For each of the four potential outcomes, both a Hypothesis is selected to be true, and there is a true $Z_i = 1$ ie. there is a true category for the unlabled data point.  The values of elements the matrix $K$ can be chosen as positive values to indicate a loss, and negative to indicate utility (negative loss).
+
+A simple example is in the case of *"0-1" loss*.  Let's say that $\mathrm{H}_1$ and $Z_1$ correspond to a detonation, which $\mathrm{H}_2$ and $Z_2$ corresponding to all other event categories considered.  Under 0-1 loss, selection of $\mathrm{H}_1$, when the event is truly a detonation, would be of no loss, and the entry $K_{1,1} = 0$.  The same can be said for the correct selection of $\mathrm{H}_2$, when the event is truly not a detonation, meaning $K_{2,2} = 0$ under 0-1 loss.  For the cases of choosing to categorize the event as a detonation, when it is not (false positive), and choosing to categorize the event as not a detonation when it is (false negative), $K_{2,1} = K_{1,2} = 1$, meaning that the loss of claiming an event is a detonation when it is not, and the loss for not catching a true detonation is considered equal.
+
+With the computation completed up to this point, we can calculate the expected loss of categorizing a new event into a specified category vs. the rest of the categories.  This final result, can be easily viewed using the `summary()` function.  The argument `index` selects the unlabled data point of interest.  The argument `category` specifies a category for hypothesis testing.  The loss of choosing the stipulated `category` will be compared to the loss of not choosing the stipulated category.  The default for the argument `K` is 0-1 loss.  A different `K` can be provided after careful consideration as to what the elements of `K` should be.
+
+```{r}
+summary(cat_pred, event_index = 9, category = "explosion")
+```
+
+The call to the `summary()` function prints two tables to the console.  The first summarizes the distributions plotted above.  The expectation of each distribution along with the 95% Credible Interval around the mode are printed.  The first two lines in this table are important for the next table.  When more than two categories are used, `"Not [category of interest]"` is a sum of the probabilities of the categories without the category stipulated by the `category` argument.
+
+Given loss matrix `K`, an equivalent decision rule can be calculated.  In this way, a serious analysis of the entries for the loss matrix can be used to calculate a more thoughtful decision rule compared to rejecting the null for $\alpha < 0.05$ as might be used for a p-value based methodology.  When using 0-1 loss, if the expected probability `category` is greater than 0.5, then the action of categorizing the unlabeled event as `category` will also have the minimum expected loss.  Expected loss for each action is tabulated in the second table printed to the console and the minimum expected loss is highlighted with an arrow `<-`.
+
+Above, we noticed that unlabeled event 9 was a mis-categorization.  The first table printed to the console, quantifies some of the uncertainty in the distribution of the probability of each category.  Calculating minimum expected loss for this point, also shows that the choice of an explosion is the least risky, given all of the data observed.
+
+However, what if a different loss matrix was chosen.  Let's say that we want to make sure that we do not accuse another state of violating the test ban treaty, when the event was actually an earthquake.  Doing so may increase international tensions and make the accuser look foolish.  We can set $K_{2,1} = 4$ and say that the loss of a false accusation is 4 times as great as the loss due to not detecting a test.  Along those lines, we can keep $K_{1,1} = 0$ in the event that there is an illegal test and we detect it, it is good that we have correctly identified the event, but not so good that the event took place.  We can set $K_{2,2} = -0.5$, there is a slight reward for correctly identifying an earthquake, but we do not want to weight the utility of the correct identification of an earthquake more heavily than a mis-categorization.  Rerunning the `summary()` function with this loss matrix produces the results:
+
+```{r}
+C <- matrix(c(0,4,1,-0.5), ncol = 2, nrow = 2)
+C
+summary(cat_pred, event_index = 9, category = "explosion", C = C)
+
+
+temp <- becm_decision(bayes_pred = cat_pred, vic = "explosion", alpha = 0.05, cat_truth = newdata_truth, pn = TRUE, C = matrix(c(0,1,1,0), ncol = 2, nrow = 2))
+```
+
+We can see that with the different $K$ matrix, the decision rule has been updated.  Additionally, the category selected as having the lowest expected loss has changed.  Changing the values of $K$ does not necessarily decrease the miss-categorization rate.  However, specifying $K$ allows for the organization using this methodology to weight the results obtained by a quantitative specification of their goals in order to make a decision.  This specification of $K$ led to the need of stronger evidence in order to claim that an unknown event was an explosion.  
+
+More details on this application of decision theory can be read in a future publication.
+
+```{r eval = FALSE, include = FALSE}
+realECM <- read.csv("/Users/skoermer/Documents/ECM/packages/ezECM/inst/extdata/ECM_validation_data_scrubbed.csv")
+
+sub_realECM <- realECM[,c("Source.Type", "pTT", "pLP", "pCF_EKA", "pCF_GBA", "pCF_WRA", "pCF_YKA",
+"pPgLg", "pIS_amp", "pIS_dur")]
+
+names(sub_realECM) <- c("event", "pTT", "pLP", "pCF_EKA", "pCF_GBA", "pCF_WRA", 
+"pCF_YKA", "pPgLg", "pIS_amp", "pIS_dur")
+
+### Removing what I think is troublesome for now
+
+sub_realECM <- sub_realECM[,c("event", "pTT", "pLP", "pCF_EKA", "pCF_GBA", "pCF_WRA", 
+"pCF_YKA")]
+
+
+
+sub_realECM[,-1] <- apply(sub_realECM[,-1], 2, as.numeric)
+
+sub_realECM <- sub_realECM[-which(sub_realECM$pTT == 0), ]
+
+na_detect <- apply(sub_realECM[,-1], 1, function(X)(sum(is.na(X))))
+
+sub_realECM <- sub_realECM[-(which(na_detect == 6)), ]
+
+for(i in unique(sub_realECM$event)){
+  print(i)
+  print(suppressWarnings(apply(train_sub_realECM[train_sub_realECM$event == i, -1], 2, range, na.rm = TRUE)))
+}
+
+# sub_realECM_MEX <- sub_realECM[which(sub_realECM$event == "MEX"),]
+# sub_realECM <- sub_realECM[-which(sub_realECM$event == "MEX"),]
+
+train_index <- sample(1:nrow(sub_realECM), size = floor(nrow(sub_realECM)*0.9))
+
+train_sub_realECM <- sub_realECM[train_index,]
+test_sub_realECM <- sub_realECM[-train_index,]
+
+realECM_fit <- BayesECM(Y = train_sub_realECM, BT = c(5000, 50000), verb = TRUE)
+
+test_truth <- test_sub_realECM$event
+test_sub_realECM$event <- NULL
+
+real_pred <- predict(object = realECM_fit, Ytilde = test_sub_realECM, thinning = 1)
+
+i <- 30
+
+plot(real_pred, index = i, cat_labels = c("Shallow EQ", "Explosion", "Deep EQ", "MEX"), features = "Expectation line", cex.main = 2)
+test_truth[i]
+
+```
+
+```{r eval = FALSE, include = FALSE}
+
+if(length(rownames(x[[1]])) != length(cat_labels)){
+    stop("cat_labels argument must be the same length as rownames(x[[1]]).")
+  }
+
+  dens_list <- list()
+  dens_range <- 0
+  Epz <- rep(NA, times= length(cat_labels))
+
+  for(i in 1:length(cat_labels)){
+    dens_list[[i]] <- stats::density(x[[index]][i,], n = 1024)
+    zero1index <- which(!(dens_list[[i]]$x < 0 | dens_list[[i]]$x > 1))
+    dens_list[[i]]$x <- dens_list[[i]]$x[zero1index]
+    dens_list[[i]]$y <- dens_list[[i]]$y[zero1index]
+    dens_range <- range(dens_range, dens_list[[i]]$y)
+    Epz[i] <- mean(x[[index]][i,], na.rm = TRUE)
+  }
+
+
+  plot.args <- list(...)
+  plot.args <- as.list(plot.args)
+
+  if(is.null(plot.args$main)){
+    plot.args$main <- as.expression(bquote(tilde(Y)[.(index)]))
+  }
+
+  if(is.null(plot.args$xlab)){
+    plot.args$xlab <- as.expression(bquote("p(" * Z * ")"))
+  }
+
+  if(is.null(plot.args$ylab)){
+    plot.args$ylab <- "Density"
+  }
+
+  if(is.null(plot.args$ylim)){
+    plot.args$ylim <- dens_range
+  }
+
+  if(is.null(plot.args$xlim)){
+    plot.args$xlim <- c(0,1)
+  }
+
+  dens_col <- grDevices::hcl.colors(n = length(cat_labels), palette = colpal)
+
+  layout(mat = matrix(1:2, ncol = 2, nrow = 1), widths = c(0.85,0.15))
+  par(mar = c(5,4,4,0.1))
+  do.call(plot, c(1, type = "n", plot.args))
+
+  Emargin <- 0.2
+  for(i in 1:length(cat_labels)){
+    graphics::lines(dens_list[[i]]$x, dens_list[[i]]$y, col = dens_col[i], lwd = 2)
+    if("Expectation line" %in% features){
+      graphics::abline(v = Epz[i], col = dens_col[i], lty = 2, lwd = 2)
+      }
+    }
+  if("Expectation text" %in% features){
+    pos.use <- 4
+    for(i in 1:length(cat_labels)){
+      if(Epz[i] < Emargin){
+        pos.use <- 4
+      }else if(Epz[i] > (1-Emargin)){
+        pos.use <- 2
+      }
+      text(x = Epz[i], y = dens_range[2]/2, labels = bquote("E[p(" * z[.(i)] * ")]" == .(round(Epz[i], digits = 2))), pos = pos.use, cex = 0.85)
+    }
+  }
+
+  par(mar = c(0.1,0.1,0.1,0.1))
+  #plot(1, type = "n", xlab = "", ylab = "", xlim = c(0,1), ylim = c(0,1))
+  plot.new()
+  #legend("topright", inset = c(-0.13, 0), legend = c(cat_labels, "Expectation"), col = c(dens_col, "black"), lty = c(rep(1, times = length(cat_labels)),2), xpd = TRUE)
+  legend("center", legend = c(cat_labels, "Expectation"), col = c(dens_col, "black"), lty = c(rep(1, times = length(cat_labels)),2), xpd = TRUE, lwd = 2, cex = 2)
+
+
+```
