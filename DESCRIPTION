@@ -5,7 +5,7 @@ Authors@R:
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: Implementation of Event Categorization Matrix (ECM) from Anderson 2007.
-License: MIT + file LICENSE
+License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
