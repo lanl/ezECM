@@ -25,7 +25,7 @@ becm_decision(
 
 \item{pn}{Logical; \code{pn == FALSE} indicates that only accuracy of categorizations should be returned, while \code{pn == TRUE} indicates that false positives and false negatives should be returned in addition to accuracy.}
 
-\item{C}{Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.}
+\item{C}{Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.  The default is 0-1 loss for binary categorization.}
 
 \item{rej}{\code{data.frame} of rejection via typicality index retrieved from a previous call to \code{becm_decision()}.  Useful for saving computation time when comparing the results from different loss matrices, supplied by the argument \code{C}, while using the same value of \code{alpha}.}
 }
@@ -34,4 +34,9 @@ A list of two data frames of logicals.  The rows in each data frame correspond t
 }
 \description{
 Outputs batch performance metrics of decisions using the output of \code{\link[=predict.BayesECM]{predict.BayesECM()}}
+}
+\details{
+The matrix \code{C} specifies the loss for a set of categorization actions for a single new observation \eqn{\tilde{y}_{\tilde{p}}} given the probability of \eqn{\tilde{y}_{\tilde{p}}} belonging to each of \eqn{K} categories.  Actions are specified as the columns, and the event category random variables are specified as the rows.  See the vignette \code{vignette("syn-data-code", package = "ezECM")} for more mathematical details.
+
+The dimension of matrix \code{C} specifies the categorization type.  A dimension of 2 is binary categorization, with the first column and row always corresponding to the category chosen as the \code{vic} argument.  Otherwise, when the dimension of \code{C} is equal to the number of categories, the indices of the rows and columns of \code{C} are in the same order as the categories listed for \code{names(bayes_pred$BayesECMfit$Y)}.
 }

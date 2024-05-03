@@ -1235,10 +1235,14 @@ plot.BayesECMpred <- function(x, index = 1, colpal = "Zissou1", cat_labels = row
 #' @param cat_truth Vector of the same length as `nrow(bayes_pred$Ytilde)`, where `Ytilde` was previously supplied to the [predict.BayesECM()] function.  Used for accuracy calculations of a `BayesECM` fit and decision criteria when the true category of the new observations are known.
 #' @param alpha Numeric scalar between 0 and 1 used for the significance level for typicality indices.
 #' @param pn Logical; `pn == FALSE` indicates that only accuracy of categorizations should be returned, while `pn == TRUE` indicates that false positives and false negatives should be returned in addition to accuracy.
-#' @param C Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.
+#' @param C Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.  The default is 0-1 loss for binary categorization.
 #' @param rej `data.frame` of rejection via typicality index retrieved from a previous call to `becm_decision()`.  Useful for saving computation time when comparing the results from different loss matrices, supplied by the argument `C`, while using the same value of `alpha`.
 #'
 #' @return A list of two data frames of logicals.  The rows in each data frame correspond to the rows in `bayes_pred$Ytilde`.  The first data frame, named `results`, has three columns named `correct`, `fn`, and `fp`. The `results` column indicates if the categorization is correct.  `fn` and `fp` stand for false negatives and false positives respectively.  `fn` and `fp` are found under binary categorization.  Values of `NA` are returned when a false positive or false negative is not relevant.  The second data frame, named `rej`, indicates the rejection of each new observation from each category via typicality index.  One can use `rej` to inspect if the typicality index played a role in categorization, or to supply to another call of `becm_decision`.
+#'
+#' @details The matrix `C` specifies the loss for a set of categorization actions for a single new observation \eqn{\tilde{y}_{\tilde{p}}} given the probability of \eqn{\tilde{y}_{\tilde{p}}} belonging to each of \eqn{K} categories.  Actions are specified as the columns, and the event category random variables are specified as the rows.  See the vignette \code{vignette("syn-data-code", package = "ezECM")} for more mathematical details.
+#'
+#' The dimension of matrix `C` specifies the categorization type.  A dimension of 2 is binary categorization, with the first column and row always corresponding to the category chosen as the `vic` argument.  Otherwise, when the dimension of `C` is equal to the number of categories, the indices of the rows and columns of `C` are in the same order as the categories listed for `names(bayes_pred$BayesECMfit$Y)`.
 #'
 #' @export
 #'
@@ -1443,7 +1447,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NU
 
     }else{
       ## Need to code up what to do if all ytilde are missing the same discriminant
-      stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.")
+      stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer@lanl.gov) if you are recieving this error for your application.")
     }
   }
     ### End if statement related to is.null(rej)

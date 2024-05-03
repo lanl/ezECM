@@ -98,17 +98,7 @@ categories <- categories[c("explosion", "new.data.true")]
 knitr::kable(categories, format = "html")
 ```
 
-# To do list
 
-Some ideas I had about functionality to add to the package while typing up this document
-
-*  Export all relevant data or declare S3 object so that additional p-values can be simulated using `pval_gen()` after the first call
-
-*  plot p-values simulated from `pval_gen()` with RDA output.  Allow for transformation, ellipsoidal intervals from RDA, and different colors for training data along with new data.  Code up s.t. plotting user provided p-values can easily be used.
-
-*  Function for importing `*.csv` of user provided p-values, in a way that makes plotting, RDA, and checking newly acquired data easy.
-
-*  Saving output from RDA, in the event that computation time is large, and loading this saved file to use with newly acquired data.
 
 #  References
 

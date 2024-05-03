@@ -38,7 +38,8 @@ training_data <- training_data[-(1:10),]
 
 pval <- p_agg(training_data, transform = TRUE, newdata = newdata)
 
-binary_decision <- cecm_decision(pval = pval, alpha = 0.05, vic = "explosion", cat_truth = cat_truth)
+binary_decision <- cecm_decision(pval = pval, alpha = 0.05,
+vic = "explosion", cat_truth = cat_truth)
 
 decision <- cecm_decision(pval = pval, alpha = 0.05)
 
