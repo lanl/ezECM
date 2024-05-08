@@ -602,9 +602,16 @@ graphics::legend("topleft", bty ="n",
 
 ```
 
-Then, using the function with all of the data on overall accuracy collected.
+Then, using the function with all of the data on overall accuracy collected.  
 
 ```{r}
 ECM_boxplot(exp_out = exp_out, P = P, metric = "accurate")
 ```
 
+If it is desirable to instead plot false negatives or false positives, the argument `metric` can be set to `"FN"` and `"FP"` respectively.  
+
+```{r}
+ECM_boxplot(exp_out = exp_out, P = P, metric = "FN")
+```
+
+It is likely that without any changes to the code the plots above can look quite different.  Using the commented out values for the variables `P`, `iters`, and `BT` will help, but the computation time for the full experiment is a few days.  Alternatively, we have a hunch the settings `iters <- 50`, `BT <- c(500, 20500)`, and `thinning <- 2` to provide a good compromise between computation time and Monte Carlo variance.  Additionally, larger values in the vector `P` have a longer computation time, so the larger values can be removed or added as seen fit.

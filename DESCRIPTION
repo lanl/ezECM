@@ -1,5 +1,5 @@
 Package: ezECM
-Title: Event Categorization Matrix Classifiation for Seismic Events
+Title: Event Categorization Matrix Classifiation for Nuclear Detonations
 Version: 0.0.0.9002
 Authors@R: 
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre"),
@@ -13,7 +13,8 @@ Suggests:
     knitr,
     rmarkdown,
     kableExtra,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    LaplacesDemon
 Config/testthat/edition: 3
 Imports: 
     ellipse,
@@ -26,7 +27,6 @@ Imports:
     stats,
     utils,
     HDInterval,
-    LaplacesDemon,
     mvnfast
 RdMacros: Rdpack
 VignetteBuilder: knitr
