@@ -10,7 +10,7 @@ export_ecm(x = NULL, file = stop("'file' must be specified"))
 import_ecm(file = NULL)
 }
 \arguments{
-\item{x}{Name of ECM model to be exported. \code{class(x)} should be either \code{"c-ecm"} or \code{"BayesECM"}.}
+\item{x}{Name of ECM model to be exported. \code{class(x)} should be either \code{"cECM"} or \code{"BayesECM"}.}
 
 \item{file}{Character string containing absolute or relative path of \verb{*.rda} file to be exported or imported.}
 }
@@ -18,7 +18,7 @@ import_ecm(file = NULL)
 Saves file or imports file into global environment.
 }
 \description{
-\code{export_ecm()} saves an ECM model fit to training data for later use. The object can be the output of the \code{\link[=p_agg]{p_agg()}} or \code{\link[=BayesECM]{BayesECM()}} functions.  Object saved in user specified location.
+\code{export_ecm()} saves an ECM model fit to training data for later use. The object can be the output of the \code{\link[=cECM]{cECM()}} or \code{\link[=BayesECM]{BayesECM()}} functions.  Object saved in user specified location.
 
 \code{import_ecm()} loads a previously exported ECM model into the global environment.
 }

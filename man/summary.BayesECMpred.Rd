@@ -31,7 +31,7 @@ Tabulates results from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} f
 
 \subsection{Typicality}{
 
-Typicality indices are used in \code{\link[=cecm_decision]{cecm_decision()}} as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  \code{summary.BayesECMpred} prints the expected typicality related to the training data as a whole.  The expectation is taken over the full mixture of predictive distributions.  When \code{summary.BayesECMpred} is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
+Typicality indices are used in \code{\link[=cECM_decision]{cECM_decision()}} as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  \code{summary.BayesECMpred} prints the expected typicality related to the training data as a whole.  Note that expected typicality is different than what is recommended, and likely this feature will be depreciated after further development.  The expectation is taken over the full mixture of predictive distributions.  When \code{summary.BayesECMpred} is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
 }
 }
 \examples{

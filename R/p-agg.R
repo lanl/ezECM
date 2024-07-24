@@ -4,12 +4,13 @@
 #'
 #' Details on regularized discriminant analysis (RDA) can be found in \insertCite{friedman1989regularized;textual}{ezECM}.  Details on related implementation found in \insertCite{anderson2007mathematical;textual}{ezECM}.
 #'
-#' @param x Either a `data.frame` of training data or the `list` output from previous use of the `p_agg` function.  If a `data.frame` is supplied, each row contains one point of training data.  Additionally, one column, with the name of `event`, must contain labels for the event of each row.  The remaining columns contain the observed `ncol(x) - 1` discriminant related p-value data.
+#' @param x Either a `data.frame` of training data or the `list` output from previous use of the `cECM` function.  If a `data.frame` is supplied, each row contains one point of training data.  Additionally, one column, with the name of `event`, must contain labels for the event of each row.  The remaining columns contain the observed `ncol(x) - 1` discriminant related p-value data.
 #' @param newdata a `data.frame` containing new data for event categorization.  Must use a subset of the discriminants used in the training data.  If for a particular event a certain discriminant is unavailable, specifying `NA` in place of the p-value will allow for calculation of the aggregate p-value.
 #' @param rda_params a `list` of arguments passed to the [klaR::rda()] function.  If arguments `rda_params$x` or `rda_params$grouping` are supplied, they are ignored.
 #' @param transform Logical indicating if the supplied p-values should be transformed by the function \eqn{2/\pi \times \mathrm{asin}\sqrt{X}}.  Ignored if a `list` is supplied as the argument `x`.
 #'
-#' @return A list.  All possible returned objects contain a list element indicating the value of `transform` supplied to the `p_agg` function call, as well as a [klaR::rda()] object related to relevant training data.  In addition if `newdata` argument is supplied, the returned list contains a `data.frame` specifying aggregate p-values for each new event (rows) for related event category (columns).
+#' @return A list.  All possible returned objects contain a list element indicating the value of `transform` supplied to the `cECM` function call, as well as a [klaR::rda()] object related to relevant training data.  In addition if `newdata` argument is supplied, the returned list contains a `data.frame` specifying aggregate p-values for each new event (rows) for related event category (columns).
+#'
 #' @export
 #'
 #' @importFrom Rdpack reprompt
@@ -29,12 +30,12 @@
 #'
 #' x <- x[-s,]
 #'
-#' pval_cat <- p_agg(x = x, transform = TRUE)
+#' pval_cat <- cECM(x = x, transform = TRUE)
 #'
-#' pval_cat <- p_agg(x = pval_cat, newdata = newdata)
+#' pval_cat <- cECM(x = pval_cat, newdata = newdata)
 #'
 #'
-p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
+cECM <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
 
 
@@ -80,7 +81,7 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
       newdata$event <- NULL
 
       if(!all(names(newdata) %in% names(x[,-which(names(x) == "event")]))){
-        stop("Discriminant names for newdata are inconsistent with discriminant names of the training data.  This must be corrected before using the p_agg() function.")
+        stop("Discriminant names for newdata are inconsistent with discriminant names of the training data.  This must be corrected before using the cECM() function.")
       }
 
       if(any(names(newdata) != names(x[,-which(names(x) == "event")]))){
@@ -94,9 +95,9 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
     p <- length(names(x))-1
     K <- length(unique(x$event))
 
-    p_agg_out <- data.frame(matrix(NA, ncol = K, nrow = nrow(newdata)))
-    names(p_agg_out) <- rda_fit$classes#names(x)[-which(names(x) == "event")]
-    llik <- p_agg_out
+    cECM_out <- data.frame(matrix(NA, ncol = K, nrow = nrow(newdata)))
+    names(cECM_out) <- rda_fit$classes#names(x)[-which(names(x) == "event")]
+    llik <- cECM_out
 
     for(k in 1:K){
 
@@ -105,7 +106,7 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
       mu <- rda_fit$means[,k]
 
-      p_agg_vec <- llik_vec <- rep(NA, times = nrow(newdata))
+      cECM_vec <- llik_vec <- rep(NA, times = nrow(newdata))
 
       for(i in 1:nrow(newdata)){
 
@@ -130,12 +131,12 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
 
 
-        p_agg_vec[i] <- 1-stats::pchisq(chi2.stat, df = length(Y))
+        cECM_vec[i] <- 1-stats::pchisq(chi2.stat, df = length(Y))
         llik_vec[i] <- chi2.stat + ldet
 
       }
 
-      p_agg_out[,k] <- p_agg_vec
+      cECM_out[,k] <- cECM_vec
       llik[,k] <- llik_vec
 
     }
@@ -145,7 +146,7 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
 
 
-  }else if(inherits(x, "cecm") ){
+  }else if(inherits(x, "cECM") ){
 
     rda_fit <- x$rda_fit
 
@@ -162,7 +163,7 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
       newdata$event <- NULL
 
       if(!all(names(newdata) %in% names(x$x[,-which(names(x$x) == "event")]))){
-        stop("Discriminant names for newdata are inconsistent with discriminant names of the training data.  This must be corrected before using the p_agg() function.")
+        stop("Discriminant names for newdata are inconsistent with discriminant names of the training data.  This must be corrected before using the cECM() function.")
       }
 
       if(all(names(newdata) != names(x$x[,-which(names(x$x) == "event")]))){
@@ -175,9 +176,9 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
       p <- ncol(x$x) - 1
 
-      p_agg_out <- data.frame(matrix(NA, ncol = K, nrow = nrow(newdata)))
-      names(p_agg_out) <- rda_fit$classes
-      llik <- p_agg_out
+      cECM_out <- data.frame(matrix(NA, ncol = K, nrow = nrow(newdata)))
+      names(cECM_out) <- rda_fit$classes
+      llik <- cECM_out
 
       for(k in 1:K){
 
@@ -188,7 +189,7 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
         mu <- rda_fit$means[,k]
 
-        p_agg_vec <- llik_vec <- rep(NA, times = nrow(newdata))
+        cECM_vec <- llik_vec <- rep(NA, times = nrow(newdata))
 
         for(i in 1:nrow(newdata)){
 
@@ -209,13 +210,13 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
 
 
-          p_agg_vec[i] <- 1-stats::pchisq(chi2.stat, df = length(Y))
+          cECM_vec[i] <- 1-stats::pchisq(chi2.stat, df = length(Y))
           llik_vec[i] <- chi2.stat + ldet
 
 
         }
 
-        p_agg_out[,k] <- p_agg_vec
+        cECM_out[,k] <- cECM_vec
         llik[,k] <- llik_vec
 
       }
@@ -230,25 +231,25 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
  if(inherits(x, "data.frame") ){
    if(!is.null(newdata)){
 
-     ## The model is trained, testing data was included in the call to the p_agg function
-     return(structure(list(p_agg = p_agg_out, llik = llik, newdata = newdata.save, rda_fit = rda_fit, x = x, transform = transform), class = "cecm"))
+     ## The model is trained, testing data was included in the call to the cECM function
+     return(structure(list(cECM = cECM_out, llik = llik, newdata = newdata.save, rda_fit = rda_fit, x = x, transform = transform), class = "cECM"))
 
    }else{
 
-     ## The model is trained, but testing data was NOT included in the call to the p_agg function
-     return(structure(list(rda_fit = rda_fit, x = x, transform = transform), class = "cecm"))
+     ## The model is trained, but testing data was NOT included in the call to the cECM function
+     return(structure(list(rda_fit = rda_fit, x = x, transform = transform), class = "cECM"))
 
    }
- }else if(inherits(x, "cecm") ){
+ }else if(inherits(x, "cECM") ){
 
    if(!is.null(newdata)){
 
-     ## A trained model was provided to the p_agg function, as well as testing data.
-     return(structure(list(p_agg = p_agg_out, llik = llik, newdata = newdata.save, rda_fit = rda_fit, x = x$x, transform = x$transform), class = "cecm"))
+     ## A trained model was provided to the cECM function, as well as testing data.
+     return(structure(list(cECM = cECM_out, llik = llik, newdata = newdata.save, rda_fit = rda_fit, x = x$x, transform = x$transform), class = "cECM"))
 
    }else{
 
-     return(structure(list(rda_fit = rda_fit, x = x$x, transform = x$transform), class = "cecm"))
+     return(structure(list(rda_fit = rda_fit, x = x$x, transform = x$transform), class = "cECM"))
 
    }
 
@@ -262,17 +263,17 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 #'
 #' Returns category decisions for uncategorized events.  When the true category of such events are known performance metrics are returned.
 #'
-#' @param pval  Class `"cecm"` object obtained from providing training and testing data to the [p_agg()] function.
-#' @param alpha Scalar numeric between 0 and 1, used as the significance level for hypothesis testing.
+#' @param pval  Class `"cECM"` object obtained from providing training and testing data to the [cECM()] function.
+#' @param alphatilde Scalar numeric between 0 and 1, used as the significance level for hypothesis testing.
 #' @param vic  Character vector of length one, indicating the Very Important Category (VIC).  Used for judging accuracy, false negatives, and false positives for binary categorization.  Required when `cat_truth` is supplied.
-#' @param cat_truth Character vector corresponding to the true group of each row in the `newdata` argument, previously provided to the [p_agg()] function.  When supplied, along with `vic`, binary categorization accuracy is returned.
+#' @param cat_truth Character vector corresponding to the true group of each row in the `newdata` argument, previously provided to the [cECM()] function.  When supplied, along with `vic`, binary categorization accuracy is returned.
 #'
-#' @return When `is.null(cat_truth) == TRUE` a vector providing the categorization over all even categories is returned.  When the `cat_truth` and `vic` arguments are supplied a list is returned containing a `data.frame` detailing if each event was categorized accurately in a binary categorization framework, was a false positive, was a false negative, and the estimated event category.  A vector including overall categorization accuracy, false positive rate, and false negative rate is included with the list.
+#' @return When `is.null(cat_truth) == TRUE` a vector providing the categorization over all event categories is returned.  When the `cat_truth` and `vic` arguments are supplied a list is returned containing a `data.frame` detailing if each event was categorized accurately in a binary categorization framework, was a false positive, was a false negative, and the estimated event category.  A vector stating overall categorization accuracy, false positive rate, and false negative rate is included with the list.
 #'
 #' @details
-#' When `is.null(cat_truth) == TRUE`, categorization over all event categories is used, using the same framework seen in \insertCite{anderson2007mathematical}{ezECM}.  The return value of `"inteterminant"` happens when there is a failure to reject multiple event categories. `"undefined"` is returned when all event categories are rejected.
+#' When `is.null(cat_truth) == TRUE`, categorization over all event categories is used, using the same framework seen in \insertCite{anderson2007mathematical}{ezECM}.  The return value of `"indeterminant"` happens when there is a failure to reject multiple event categories. `"undefined"` is returned when all event categories are rejected.
 #'
-#' When the arguments `cat_truth` and `vic` are included binary categorization is utilized instead of categorization over all training categories.  The definition of accuracy is more ambiguous when categorizing over all training categories and the user is encouraged code up their method on their own in such a scenario.  The goal of binary categorization is to estimate if an uncategorized observation is or is not in the event category stipulated by `vic`.  Uncategorized events which are `"indeterminant"` or `"undefined"` are deemed to not be in the `vic` category.
+#' When the arguments `cat_truth` and `vic` are included, binary categorization is utilized instead of categorization over all training categories.  The definition of accuracy is more ambiguous when categorizing over all training categories and the user is encouraged to develop their own code for such a case.  The goal of binary categorization is to estimate if an uncategorized observation is or is not in the event category stipulated by `vic`.  Uncategorized events which are `"indeterminant"` or `"undefined"` are deemed to not be in the `vic` category.
 #'
 #'
 #' @export
@@ -292,30 +293,30 @@ p_agg <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 #' newdata$event <- NULL
 #' training_data <- training_data[-(1:10),]
 #'
-#' pval <- p_agg(training_data, transform = TRUE, newdata = newdata)
+#' pval <- cECM(training_data, transform = TRUE, newdata = newdata)
 #'
-#' binary_decision <- cecm_decision(pval = pval, alpha = 0.05,
+#' binary_decision <- cECM_decision(pval = pval, alphatilde = 0.05,
 #' vic = "explosion", cat_truth = cat_truth)
 #'
-#' decision <- cecm_decision(pval = pval, alpha = 0.05)
+#' decision <- cECM_decision(pval = pval, alphatilde = 0.05)
 #'
-cecm_decision <- function(pval = NULL, alpha = NULL, vic = NULL, cat_truth = NULL){
+cECM_decision <- function(pval = NULL, alphatilde = NULL, vic = NULL, cat_truth = NULL){
 
   ### When vic is provided, but cat_truth is not provided, there should be the opportunity to still do binary categorization without checking accuracy metrics
 
   ## Requirements for the pval argument
-  if(!inherits(pval, "cecm")){
-    stop("Argument 'pval' must be of class 'cecm' generated by the ezECM::p_agg function.")
+  if(!inherits(pval, "cECM")){
+    stop("Argument 'pval' must be of class 'cECM' generated by the ezECM::cECM function.")
   }
-  if(is.null(pval$p_agg)){
-    stop("Argument 'pval' does not contain aggregate p-values calculated from uncategorized data.  Use the argument 'newdata' in the ezECM::p_agg function to include uncategorized data in the analysis.")
+  if(is.null(pval$cECM)){
+    stop("Argument 'pval' does not contain aggregate p-values calculated from uncategorized data.  Use the argument 'newdata' in the ezECM::cECM function to include uncategorized data in the analysis.")
   }
 
   ## Requirements for the cat_truth and vic arguments
 
   if(!is.null(cat_truth)){
-    if(length(cat_truth) != nrow(pval$p_agg)){
-      stop("Argument 'cat_truth' must be associated with the data used in previously generating 'pval$p_agg'.  It is required that length(cat_truth) == nrow(pval$p_agg) ")
+    if(length(cat_truth) != nrow(pval$cECM)){
+      stop("Argument 'cat_truth' must be associated with the data used in previously generating 'pval$cECM'.  It is required that length(cat_truth) == nrow(pval$cECM) ")
     }
     if(is.null(vic)){
       stop("Argument 'vic' is required along with 'cat_truth' in order to calculate accuracy of the categorization in a binary categorization decision framework.")
@@ -323,26 +324,26 @@ cecm_decision <- function(pval = NULL, alpha = NULL, vic = NULL, cat_truth = NUL
     if(!is.character(vic)){
       stop("Argument 'vic' must be a character, and must be supplied for calculating accuracy when the 'cat_truth' argument is supplied.")
     }
-    if(!(vic %in% names(pval$p_agg))){
+    if(!(vic %in% names(pval$cECM))){
       stop("Argument 'vic' must be one of the event categories used to train the C-ECM model.")
     }
   }
 
-  if(alpha >= 1 | alpha <= 0){
-    stop("Argument 'alpha' must be between the values of 0 and 1, exclusive for both end points.")
+  if(alphatilde >= 1 | alphatilde <= 0){
+    stop("Argument 'alphatilde' must be between the values of 0 and 1, exclusive for both end points.")
   }
 
-  pval <- pval$p_agg
+  pval <- pval$cECM
 
-  ## Compare the aggregate p-values to alpha to determine which categories get rejected
+  ## Compare the aggregate p-values to alphatilde to determine which categories get rejected
 
   rejections <- apply(pval, 1, function(X, a){
-    names(X)[which(X <= alpha)]
-  }, a = alpha, simplify = FALSE)
+    names(X)[which(X <= alphatilde)]
+  }, a = alphatilde, simplify = FALSE)
 
   not_rejections <- apply(pval, 1, function(X, a){
-    names(X)[which(X > alpha)]
-  }, a = alpha, simplify = FALSE)
+    names(X)[which(X > alphatilde)]
+  }, a = alphatilde, simplify = FALSE)
 
   group <- rep(NA, times = length(rejections))
 

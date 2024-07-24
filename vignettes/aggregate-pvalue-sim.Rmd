@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-The purpose of this vignette is to illustrate how one would use the `pval_gen()` function to simulate p-values and then feed these p-values to the `p_agg()` function to illustrate the performance of event categorization techniques.  Alternatively, one could use this vignette to learn how to feed sets of real training p-values along with newly generated p-values to `p_agg()`.
+The purpose of this vignette is to illustrate how one would use the `pval_gen()` function to simulate p-values and then feed these p-values to the `cECM()` function to illustrate the performance of event categorization techniques.  Alternatively, one could use this vignette to learn how to feed sets of real training p-values along with newly generated p-values to `cECM()`.
 
 First, let's load the package:
 
@@ -51,7 +51,7 @@ The first column of the `simulated.pvalues` data frame contains a p-value relate
 simulated.pvalues[1,]
 ```
 
-To show the functionality of the `p_agg()` function, `simulated.pvalues` needs to be split into a training set and a set that would be used equivalent to if a new event which needed to be categorized occurred.  In this case, we will use the last 10 sets of p-values generated.  The p-values for `new.data` are tabulated after subsetting them below.
+To show the functionality of the `cECM()` function, `simulated.pvalues` needs to be split into a training set and a set that would be used equivalent to if a new event which needed to be categorized occurred.  In this case, we will use the last 10 sets of p-values generated.  The p-values for `new.data` are tabulated after subsetting them below.
 
 ```{r pvalgen_traindf}
 train <- simulated.pvalues[1:150,]
@@ -60,21 +60,21 @@ new.data <- simulated.pvalues[151:160,]
 knitr::kable(new.data, format = "html")
 ```
 
-The `p_agg()` function cannot use the `event` column of `new.data`.  This column is saved in order to check the accuracy of the method, and then deleted from the `new.data` data frame.
+The `cECM()` function cannot use the `event` column of `new.data`.  This column is saved in order to check the accuracy of the method, and then deleted from the `new.data` data frame.
 
 ```{r truecat}
 new.data.true <- new.data$event
 new.data$event <- NULL
 ```
 
-We are now ready to use the `p_agg()` function.
+We are now ready to use the `cECM()` function.
 
 # ECM
 
-First, we will use `p_agg()` to fit a model to the training data, and then use this model fit to look at the evidence that the new data is from the distribution of p-values obtained from explosion data.  It is possible to feed both the training data and the new data to the `p_agg()` function simultaneously.  However, the usage illustrated below is more realistic for a real world scenario.
+First, we will use `cECM()` to fit a model to the training data, and then use this model fit to look at the evidence that the new data is from the distribution of p-values obtained from explosion data.  It is possible to feed both the training data and the new data to the `cECM()` function simultaneously.  However, the usage illustrated below is more realistic for an application where the model would first be trained and later be used.
 
 ```{r pagg_fit}
-fit <- p_agg(x = train)
+fit <- cECM(x = train)
 ```
 
 Then this object can be plotted:
@@ -86,13 +86,13 @@ plot(fit)
 This `fit` can be saved for later use.  However, because we have some new data, we are ready to use this `fit` with the `new.data`.
 
 ```{r pagg_newdata}
-new.data.category <- p_agg(x = fit, newdata = new.data)
+new.data.category <- cECM(x = fit, newdata = new.data)
 ```
 
-We can then investigate the aggregate p-values for `new.data` belonging to the `"explosion"` distribution.  Organizing and summarizing the output from `p_agg()` allows for a comparison between the aggregate p-value and the true category.  Ideally, the `explosion` column should have an aggregate p-value below the pre-determined threshold when the `new.data.true` column contains `"earthquake"`.
+We can then investigate the aggregate p-values for `new.data` belonging to the `"explosion"` distribution.  Organizing and summarizing the output from `cECM()` allows for a comparison between the aggregate p-value and the true category.  Ideally, the `explosion` column should have an aggregate p-value below the pre-determined threshold when the `new.data.true` column contains `"earthquake"`.
 
 ```{r pagg_summary}
-categories <- cbind(new.data.category$p_agg, new.data.true)
+categories <- cbind(new.data.category$cECM, new.data.true)
 categories <- categories[c("explosion", "new.data.true")]
 
 knitr::kable(categories, format = "html")

@@ -3,8 +3,8 @@ Title: Event Categorization Matrix Classifiation for Nuclear Detonations
 Version: 0.0.0.9002
 Authors@R: 
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: Implementation of Event Categorization Matrix (ECM) from Anderson 2007 and a Bayesian variant.
+           comment = c(ORCID = "0000-0002-0325-7034"))
+Description: Implementation of an Event Categorization Matrix (ECM) detonation detection model and a Bayesian variant.
 License: GPL (>= 3) + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

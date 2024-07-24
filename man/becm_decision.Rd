@@ -8,32 +8,32 @@ becm_decision(
   bayes_pred = NULL,
   vic = NULL,
   cat_truth = NULL,
-  alpha = 0.05,
+  alphatilde = 0.05,
   pn = TRUE,
   C = matrix(c(0, 1, 1, 0), ncol = 2),
   rej = NULL
 )
 }
 \arguments{
-\item{bayes_pred}{An object of class \code{"BayesECMpred"} returned from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.  Includes the results of a trained model and prediction on data where the true category is unknown.}
+\item{bayes_pred}{An object of class \code{"BayesECMpred"} returned from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.  Data and order of data provided to \code{\link[=predict.BayesECM]{predict.BayesECM()}} much that of the \code{cat_truth} argument.}
 
-\item{vic}{Character of length 1, indicating the "Very Important Category" (\code{vic}) used for calculating categorization metrics.  The return of \code{becm_decision} provides information on if new observations should be categorized into \code{vic} or the remainder of the training categories grouped together.}
+\item{vic}{Character string, indicating the "Very Important Category" (\code{vic}) used for calculating categorization metrics.  The return of \code{becm_decision()} provides information on if new observations should be categorized into \code{vic} or the remainder of the training categories grouped together.}
 
 \item{cat_truth}{Vector of the same length as \code{nrow(bayes_pred$Ytilde)}, where \code{Ytilde} was previously supplied to the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.  Used for accuracy calculations of a \code{BayesECM} fit and decision criteria when the true category of the new observations are known.}
 
-\item{alpha}{Numeric scalar between 0 and 1 used for the significance level for typicality indices.}
+\item{alphatilde}{Numeric scalar between 0 and 1 used for the significance level of typicality indices.}
 
-\item{pn}{Logical; \code{pn == FALSE} indicates that only accuracy of categorizations should be returned, while \code{pn == TRUE} indicates that false positives and false negatives should be returned in addition to accuracy.}
+\item{pn}{Logical.  Acronym for "false Positive, false Negative". \code{pn == FALSE} indicates that only accuracy of categorizations should be returned, while \code{pn == TRUE} indicates that false positives and false negatives should be returned in addition to accuracy.}
 
 \item{C}{Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.  The default is 0-1 loss for binary categorization.}
 
-\item{rej}{\code{data.frame} of rejection via typicality index retrieved from a previous call to \code{becm_decision()}.  Useful for saving computation time when comparing the results from different loss matrices, supplied by the argument \code{C}, while using the same value of \code{alpha}.}
+\item{rej}{\code{data.frame} of rejection via typicality index retrieved from a previous call to \code{becm_decision()}.  Useful for saving computation time when comparing the results from different supplied matrices for argument \code{C}, while using a constant value of \code{alphatilde}.}
 }
 \value{
 A list of two data frames of logicals.  The rows in each data frame correspond to the rows in \code{bayes_pred$Ytilde}.  The first data frame, named \code{results}, has three columns named \code{correct}, \code{fn}, and \code{fp}. The \code{results} column indicates if the categorization is correct.  \code{fn} and \code{fp} stand for false negatives and false positives respectively.  \code{fn} and \code{fp} are found under binary categorization.  Values of \code{NA} are returned when a false positive or false negative is not relevant.  The second data frame, named \code{rej}, indicates the rejection of each new observation from each category via typicality index.  One can use \code{rej} to inspect if the typicality index played a role in categorization, or to supply to another call of \code{becm_decision}.
 }
 \description{
-Outputs batch performance metrics of decisions using the output of \code{\link[=predict.BayesECM]{predict.BayesECM()}}
+Outputs batch performance metrics of decisions using the output of \code{\link[=predict.BayesECM]{predict.BayesECM()}} when the true category of testing events are known.  Can be used for empirically comparing different model fits.
 }
 \details{
 The matrix \code{C} specifies the loss for a set of categorization actions for a single new observation \eqn{\tilde{y}_{\tilde{p}}} given the probability of \eqn{\tilde{y}_{\tilde{p}}} belonging to each of \eqn{K} categories.  Actions are specified as the columns, and the event category random variables are specified as the rows.  See the vignette \code{vignette("syn-data-code", package = "ezECM")} for more mathematical details.

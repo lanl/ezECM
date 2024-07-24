@@ -13,55 +13,53 @@ BayesECM(
 )
 }
 \arguments{
-\item{Y}{\code{data.frame} of training data, with rows corresponding to \eqn{N} individual events, and columns corresponding to \eqn{p} discriminants.  An additional column named \code{"event"} is required, which labels each row with the known event category.  Missing data is specified with \code{NA}.  \code{dim(Y)} must equal \code{c(N, p + 1)}.}
+\item{Y}{\code{data.frame} of training data, with rows corresponding to \eqn{N} individual observations, and columns corresponding to \eqn{p} discriminants.  An additional column named \code{"event"} is required, which labels each row with the known event category.  Missing data is specified with \code{NA}.  \code{dim(Y)} must equal \code{c(N, p + 1)}.}
 
-\item{BT}{integer vector of length 2.  Used to specify the number \code{c("Burn-in", "Total")} Markov-Chain Monte-Carlo samples drawn.  \code{BT[1]} stipulates the number of initial \emph{Burn-in} samples to discard, while \code{BT[2]} stipulates the total number of samples.}
+\item{BT}{integer vector of length 2, stipulating the number of \code{c("Burn-in", "Total")} Markov-Chain Monte-Carlo samples drawn.}
 
-\item{priors}{list of parameters to be used in the prior distributions for model parameters.  See details.}
+\item{priors}{list of parameters to be used in prior distributions.  See details.}
 
-\item{verb}{logical.  A setting of \code{TRUE} prints a progress bar as samples are drawn and warnings when they occur.}
+\item{verb}{logical.  A setting of \code{TRUE} prints a progress bar as samples are drawn, as well as warnings when they occur.}
 
-\item{transform}{character string specifying the transform to use on the elements of\code{Y} before fitting the model.  Options are \code{"logit"} and \code{"arcsin"} with \code{"logit"} being the default.  See details.}
+\item{transform}{character string specifying the transform to use on the elements of \code{Y} before fitting the model.  Options are \code{"logit"} and \code{"arcsin"} with \code{"logit"} being the default.  See details.}
 }
 \value{
-Returns an object of \code{class("BayesECM")}.  If there are missing data in the supplied argument \code{Y} the object contains Markov-Chain Monte-Carlo samples of the imputed missing data.  Prior distribution parameters used are always included in the output.  The primary use of an object returned from \code{\link[=BayesECM]{BayesECM()}} is to later use this object to categorize unlabeled data with the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.
+Returns an object of \code{class("BayesECM")}.  If there are missing data in the supplied argument \code{Y} the object contains Markov-chain Monte-Carlo samples of the imputed missing data.  Prior distribution parameters used are always included in the output.  The primary use of an object returned from \code{\link[=BayesECM]{BayesECM()}} is to later use this object to categorize unlabeled data with the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.
 }
 \description{
-Training a Bayesian ECM model
+Training a Bayesian ECM (B-ECM) model
 }
 \details{
-The output of \code{BayesECM()} provides a fitted Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in \code{Y}, these values are imputed.  If no values are missing, training is perceptually instantaneous for all but very large data sets.  The next step for categorization is prediction of the category of a new observation, via the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.
-\subsection{Data Prep}{
+The output of \code{BayesECM()} provides a trained Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in \code{Y}, these values are imputed.  A trained \code{BayesECM} model is then used with the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function to categorize new observations.
+\subsection{Data Preparation}{
 
 Before the data in \code{Y} is used with the model, the p-values \eqn{\in (0,1]} are transformed in an effort to better align the data with some properties of the normal distribution.  When \code{transform == "logit"} the inverse of the logistic function \eqn{Y_{N \times p} = \log\left(\texttt{Y}\right) - \log\left(1-\texttt{Y}\right)} maps the values to the real number line.  Values of \code{Y} exactly equal to 0 or 1 cannot be used when \code{transform == "logit"}.  Setting the argument \code{transform == "arcsin"} uses the transformation \eqn{Y_{N\times p} = 2/\pi \times \mathrm{arcsin}\sqrt{Y}} further described in \insertCite{anderson2007mathematical;textual}{ezECM}.  From here forward, the variable \eqn{Y_{N \times p}} should be understood to be the transformation of \code{Y}, where \eqn{N} is the total number of rows in \code{Y} and \eqn{p} is the number of discriminant columns in \code{Y}.
 }
 
 \subsection{The Model}{
 
-The B-ECM model structure can be found in a future publication with the working title "Bayesian Event Categorization Matrix Approach for Nuclear Detonations".  Some details from this publication are reproduced here.
+The B-ECM model structure can be found in a future publication, with some details from this publication are reproduced here.
 
-Bayesian ECM assumes that all data is generated using a mixture of \eqn{K} normal distributions, each with a mean of \eqn{\mu_k}, a covariance of \eqn{\Sigma_k}.  Each event category is represented by one of the \eqn{K} distributions.
+B-ECM assumes that all data is generated using a mixture of \eqn{K} normal distributions, where \eqn{K} is equal to the number of unique event categories. Each component of the mixture has a unique mean of \eqn{\mu_k}, and covariance of \eqn{\Sigma_k}, where \eqn{k \in \{1 , \dots , K\}} indexes the mixture component.  The likelihood of the \eqn{i^{\mathrm{th}}} event observation \eqn{y^i_p} of \eqn{p} discriminants can be written as the sum below.
 
 \deqn{\sum_{k = 1}^K \pi_k \mathcal{N}(y^i_p; \mu_k, \Sigma_k)}
 
-Each Gaussian distribution in the sum is normalized by \eqn{\pi_k}, where \eqn{\sum_{k=1}^K \pi_k =1}.  \eqn{y^i_p} corresponds to a vector of length \eqn{p}.
+Each Gaussian distribution in the sum is weighted by the scalar variable \eqn{\pi_k}, where \eqn{\sum_{k=1}^K \pi_k =1} so that the density integrates to 1.
 
-There are prior distributions on each \eqn{\mu_k, \Sigma_k}, and \eqn{\pi}.  These prior distributions are detailed below.  The posterior distributions of these parameters, given \eqn{Y_{N \times p}}, is integrated over analytically, which reduces computation time for training.  Integration results in the marginal likelihood of each component in the mixture to be matrix t-distributed.
+There are prior distributions on each \eqn{\mu_k, \Sigma_k}, and \eqn{\pi}, where \eqn{\pi} is the vector of mixture weights \eqn{\{\pi_1, \dots , \pi_K\}}.  These prior distributions are detailed below.  These parameters are important for understanding the model, however they are integrated out analytically to reduce computation time, resulting in a marginal likelihood \eqn{p(Y_{N_k \times p}|\eta_k, \Psi_k, \nu_k)} which is a mixture of matrix t-distributions.  \eqn{Y_{N_k \times p}} is a matrix of the total data for the \eqn{k^{\mathrm{th}}} event category containing \eqn{N_k} total event observations for training.  The totality of the training data can be written as \eqn{Y_{N \times p}}, where \eqn{N = N_1 + \dots + N_K}.
 
-\code{BayesECM()} can handle observations where only some of the \eqn{p} discriminants have been observed, by imputing these missing values given the rest of the data.  The properties of the conditional matrix t-distribution are used in this step.
+\code{BayesECM()} can handle observations where some of the \eqn{p} discriminants of an observation are missing.  The properties of the conditional matrix t-distribution are used to impute the missing values, thereby accounting for the uncertainty related to the missing data.
 }
 
 \subsection{Prior Distributions}{
 
-The distributions  \eqn{p(\mu_k|Y_{N_k \times p})}, \eqn{p(\Sigma|Y_{N_k \times p})}, and \eqn{p(\pi|Y_{N \times p})} are dependent on the specifications of prior distributions  \eqn{p(\mu|\Sigma, \eta_k)}, \eqn{p(\Sigma| \Psi_k, \nu_k)}, and \eqn{p(\pi|\alpha)}.  The ability to use \code{"default"} priors has been included for ease of use.
+The posterior distributions  \eqn{p(\mu_k|Y_{N_k \times p}, \eta_k)}, \eqn{p(\Sigma_k|Y_{N_k \times p}, \Psi_k, \nu_k)}, and \eqn{p(\pi|Y_{N \times p}, \alpha)} are dependent on the specifications of prior distributions \eqn{p(\mu_k|\Sigma_k, \eta_k)}, \eqn{p(\Sigma_k| \Psi_k, \nu_k)}, and \eqn{p(\pi|\alpha)}.
 
-\eqn{p(\mu_k|\Sigma_k, \eta_k)} is a multivariate normal distribution with a mean of \eqn{\eta_k} and is conditional on the covariance \eqn{\Sigma_k}.   \eqn{p(\Sigma_k|\nu_k, \Psi_k)} to be equivalent, as an \href{https://en.wikipedia.org/wiki/Wishart_distribution}{Inverse Wishart} distribution with degrees of freedom parameter \eqn{\nu}, or \code{nu}, and scale matrix \eqn{\Psi}, or \code{Psi}.  \eqn{p(\pi)} is a \href{https://en.wikipedia.org/wiki/Dirichlet_distribution}{Dirichlet distribution} with the parameter vector \eqn{\alpha} of length \eqn{K}.
+\eqn{p(\mu_k|\Sigma_k, \eta_k)} is a multivariate normal distribution with a mean vector of \eqn{\eta_k} and is conditional on the covariance \eqn{\Sigma_k}.   \eqn{p(\Sigma_k|\Psi_k, \nu_k)} is an \href{https://en.wikipedia.org/wiki/Wishart_distribution}{Inverse Wishart} distribution with degrees of freedom parameter \eqn{\nu_k}, or \code{nu}, and scale matrix \eqn{\Psi_k}, or \code{Psi}.  \eqn{p(\pi|\alpha)} is a \href{https://en.wikipedia.org/wiki/Dirichlet_distribution}{Dirichlet distribution} with the parameter vector \eqn{\alpha} of length \eqn{K}.
 
-. The defaults are \eqn{\eta_k} is a vector of zeros of length \eqn{p}, \eqn{\Psi_k} is the identity matrix, and each element of \eqn{alpha} is \eqn{K/2}. Use of default prior parameters for parameters and all event categories can be specified by setting the argument \code{priors = "default"}.  If all prior parameters are to be shared between all event categories, but some non-default values are desirable then supplying a list of a similar structure to \code{priors = list(eta = "default", Psi = "default", nu = 50, alpha = 10)} can be used, where \code{"default"} can be exchanged for the correct data structure for any of the parameters in the list and vice-versa.
+The ability to use \code{"default"} priors has been included for ease of use with various settings of the \code{priors} function argument.  The default prior hyperparameter values differ for the argument of \code{transform} used, and the values can be inspected by examining the output of the \code{BayesECM()} function.  Simply setting \code{priors = "default"} provides the same default values for all \eqn{\eta_k, \Psi_k, \nu_k} in the mixture.  If all prior parameters are to be shared between all event categories, but some non-default values are desirable then supplying a list of a similar structure as \code{priors = list(eta = rep(0, times = ncol(Y) - 1), Psi = "default", nu = "default", alpha = 10)} can be used, where setting a list element \code{"default"} can be exchanged for the correct data structure for the relevant data structure.
 
-If one wishes to use some default values, but not share all parameter values between each event category, or wishes to specify each parameter value individually with no defaults, we suggest running and saving the output \code{BayesECM(Y = Y, BT = c(1,2))$priors}.  Modifying the elements of the list accordingly, and then setting the \code{priors} argument equal to the moddified list on a subsequent call to \code{BayesECM()} will produce the desired behavior.  Note that when specifying \code{eta} or \code{Psi} it is necessary that the row and column order of the supplied values corresponds to the column order of \code{Y}.
-
-For user specified prior parameters, the current implementation of \code{BayesECM()} utilizes the same prior on each component of the mixture.  Inspection of the output of \code{BayesECM()} reveals how these parameters should be provided as the \code{priors} argument to a call of \code{BayesECM()}.
+If one wishes to use some default values, but not share all parameter values between each event category, or wishes to specify each parameter value individually with no defaults, we suggest running and saving the output \code{BayesECM(Y = Y, BT = c(1,2))$priors}.  Note that when specifying \code{eta} or \code{Psi} it is necessary that the row and column order of the supplied values corresponds to the column order of \code{Y}.
 }
 }
 \examples{

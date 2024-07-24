@@ -228,10 +228,10 @@ The generated data will be used to train and test different implementations of t
 
 ## Model and Decision Specifications
 
-All methods use typicality indices as part of the decision framework.  For all methods, the significance level `alpha` is set to `0.05`.
+All methods use typicality indices as part of the decision framework.  For all methods, the significance level `alphatilde` is set to `0.05`.
 
 ```{r}
-alpha <- 0.05
+alphatilde <- 0.05
 ```
 
 We want to specify that for the B-ECM models, the weights of the components in the mixture model are informed by the data.  Alternatively, one could change `mixture_weights <- "equal"` for all components of the mixture model to have equal weight, possibly if the frequency of the events in the training data is unrelated to what is expected in practice.
@@ -277,7 +277,7 @@ $$
 \begin{array}{cc@{}cc}
 \phantom{XX} & \phantom{XX} & \phantom{XX} & \mathrm{Action}\\
 \phantom{XX} & \phantom{XX} & \phantom{XX} & \begin{array}{cc}
-\mathrm{a}_k & \mathrm{a}_{\cancel{k}}
+\mathrm{a}_k & \mathrm{a}_{k^{-}}
 \end{array}\\
 C = &
 \begin{array}{c}
@@ -358,7 +358,7 @@ To save the performance metrics for each Monte Carlo iteration, a list `exp_out`
 
 ## Data structures for saving progress
 
-cecm_recfp <- cecm_recfn <- bayes_rec <- cecm_rec <- matrix(NA, ncol = length(P), nrow = iters)
+cECM_recfp <- cECM_recfn <- bayes_rec <- cECM_rec <- matrix(NA, ncol = length(P), nrow = iters)
 Nvic <- rep(0, times = length(P))
 
 exp_out <- list()
@@ -368,11 +368,11 @@ data_template <- data.frame(matrix(NA, ncol = 2, nrow = iters))
 names(data_template) <- c("Ntest", "Nvic")
 data_template$Ntest <- Ntest
 
-p_template <- list(cecm = method_template, becm = method_template, 
+p_template <- list(cECM = method_template, becm = method_template, 
                    mbecm = method_template, mbecm_Cfn = method_template, 
                    mbecm_cat = method_template, data = data_template)
 
-bayes_rec <- cecm_rec <- matrix(NA, ncol = length(P), nrow = iters)
+bayes_rec <- cECM_rec <- matrix(NA, ncol = length(P), nrow = iters)
 
 if(verb){
 toc <- Sys.time()
@@ -418,16 +418,16 @@ for(p in P){
     exp_out[[p]][["data"]]$Nvic[i] <- sum(test_truth == as.character(vic))
     
     ## Fit the classical ECM model, apply the decision framework with the
-    ## `cecm_decision()` function, then save the results
+    ## `cECM_decision()` function, then save the results
     
-    cecm <- p_agg(x = train_full, transform = TRUE, newdata = testing)
+    cECM <- cECM(x = train_full, transform = TRUE, newdata = testing)
 
-    cecm_out <-  apply(cecm_decision(pval = cecm, alpha = alpha,
+    cECM_out <-  apply(cECM_decision(pval = cECM, alphatilde = alphatilde,
                                  vic = as.character(vic), 
                                  cat_truth = test_truth)$events[,1:3] ,2, 
                        sum, na.rm = TRUE)
 
-    exp_out[[p]][["cecm"]][i,] <- unname(cecm_out)
+    exp_out[[p]][["cECM"]][i,] <- unname(cECM_out)
     
     ## Fit the B-ECM model, using only full p observations
     
@@ -444,11 +444,11 @@ for(p in P){
     
     ## The "becm_desision()" function applies the decision theoretic framework
     ## to the training and testing data.  For one training and one testing set,
-    ## where the user wants to try different values of `alpha` and `C`, it is
+    ## where the user wants to try different values of `alphatilde` and `C`, it is
     ## not necessary to rerun the `BayesECM()` function or the `predict()`
     ## function.
     
-    becm_out <- becm_decision(bayes_pred = bayes_pred, alpha = alpha,
+    becm_out <- becm_decision(bayes_pred = bayes_pred, alphatilde = alphatilde,
                                 vic = as.character(vic), cat_truth = test_truth, 
                               pn = TRUE, C = C01)
     
@@ -468,7 +468,7 @@ for(p in P){
                                   thinning = thinning, 
                                   mixture_weights = mixture_weights)
     
-    missing_out <- becm_decision(bayes_pred = bayes_pred_missing, alpha = alpha,
+    missing_out <- becm_decision(bayes_pred = bayes_pred_missing, alphatilde = alphatilde,
                              vic = as.character(vic), cat_truth = test_truth, 
                              pn = TRUE, C = C01)
     mbecm_out <- apply(missing_out$results,2, sum, na.rm = TRUE)
@@ -483,7 +483,7 @@ for(p in P){
     ## Record the decision when the loss matrix is adjusted to target
     ## false negatives.
     
-    Cfn_out <- becm_decision(bayes_pred = bayes_pred_missing, alpha = alpha,
+    Cfn_out <- becm_decision(bayes_pred = bayes_pred_missing, alphatilde = alphatilde,
                          vic = as.character(vic), cat_truth = test_truth, 
                          pn = TRUE, C = Cfneg, rej = missing_out$rej)
     becm_Cfn_out <- apply(Cfn_out$results,2, sum, na.rm = TRUE)
@@ -494,7 +494,7 @@ for(p in P){
     ## Record the decisions when full class (K = 3) categorization is used
     ## instead of binary categorization
     
-    cat_out <-  becm_decision(bayes_pred = bayes_pred_missing, alpha = alpha,
+    cat_out <-  becm_decision(bayes_pred = bayes_pred_missing, alphatilde = alphatilde,
                           vic = as.character(vic), cat_truth = test_truth, 
                           pn = TRUE, C = Ccat, rej = missing_out$rej)
     becm_cat_out <- apply(cat_out$results,2, sum, na.rm = TRUE)
@@ -518,7 +518,7 @@ First a function for making the boxplot is defined.  The output from the experim
 
 ```{r}
 
-ECM_boxplot <- function(exp_out, P = P, models = c("cecm", "becm", 
+ECM_boxplot <- function(exp_out, P = P, models = c("cECM", "becm", 
                                                    "mbecm", 
                                                    "mbecm_Cfn",
                                                    "mbecm_cat"),

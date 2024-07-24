@@ -27,8 +27,8 @@
 \item{...}{additional arguments passed to the generic \code{\link[base:plot]{base::plot()}} function.}
 }
 \value{
-Plot showing densities and expectations that the stipulated uncategorized event belongs to each category.
+Plot showing densities and expectations for each event category for the stipulated event.
 }
 \description{
-Plots predictive densities of probabilities a new uncategorized event is from each category of interest obtained from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.
+Plots predictive densities of category probabilities event is from each category of interest obtained from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.
 }

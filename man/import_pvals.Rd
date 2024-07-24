@@ -16,15 +16,15 @@ import_pvals(file = NULL, header = TRUE, sep = ",", training = TRUE)
 \item{training}{Logical indicating if the supplied \verb{*.csv} file is to be used as training data.  Only serves to suppress warnings.}
 }
 \value{
-A data frame of p-values with each row corresponding to a particular event and each column corresponding to a particular discriminant.  If data labels are provided, an additional column will hold these values.
+A \code{\link[base:data.frame]{base::data.frame()}} of p-values with each row corresponding to a single event and each column corresponding to a particular discriminant.  If data labels are correctly provided in the supplied \verb{*.csv} file, an additional column labeled \code{event} will hold these values.
 }
 \description{
 Imports and organizes observed p-values located in a \verb{*.csv} file for training or categorization using an existing model.
 }
 \details{
-The purpose of this function is to give the user a way to import p-value data in which the data will be organized for use with the \code{\link[=p_agg]{p_agg()}} function.  Warnings are supplied when potential issues may arise with the supplied file, and the function attempts to detect and correct simple formatting issues.
+The purpose of this function is to give the user a way to import p-value data in which the data will be organized for use with the \code{\link[=cECM]{cECM()}} and \code{\link[=BayesECM]{BayesECM()}} functions.  Warnings are printed when potential issues may arise with the supplied file, and the function attempts to detect and correct simple formatting issues.
 
-Ideally, but not necessarily, the user supplies \code{import_pvals()} a \verb{*.csv} file which contains a header labeling the columns as the first row.  Each column contains the p-values of a particular discriminant, and each row corresponds to a particular event.  If training data is to be imported, the column containing known event categories is labeled "events".  If new data is imported to be used with an existing model fit, the order of the columns in the \code{new.data} file must be the same as the \verb{*.csv} file containing training data.
+Ideally, the user supplies a \verb{*.csv} file which contains a header row labeling the columns.  Each column contains the p-values of a particular discriminant, and each row must correspond to a single event.  If training data is to be imported, the column containing known event categories is labeled \code{"event"}.  If new data is imported to be used with an existing model fit, the order of the columns in the \code{new.data} file must be the same as the \verb{*.csv} file containing training data.
 }
 \examples{
 

@@ -4,25 +4,23 @@
 ##
 ## (End of Notice)
 ##
-#' Plot the data and output of ECM categorization
+#' Plot the data and output of [cECM()] categorization
 #'
-#' @param x an object of which is of class `"cecm"`, retrieved from the output of the [p_agg()] function.  The `"cecm"` object may or may not contain unlabeled data.
+#' @param x an object of which is of class `"cECM"`, retrieved from the output of the [cECM()] function.  The `"cECM"` object may or may not contain unlabeled data.
 #' @param discriminants character or integer vector of length two.  If a character vector is provided, the character strings must match a subset of the column names for the training data, ie. `all(discriminants %in% names(x$x))` must be true.  If an integer vector is given, the elements of the vector select the column indices of the data to be plotted.
-#' @param thenull character string or `NULL`.  When unlabeled data is found within an `"cecm"` object, the name of one of the event categories can be provided as this argument.  When `"thenull"` is provided, unlabled data where the category hypothesis is rejected is colored red.
-#' @param alpha numeric value specifying hypothesis testing rejection region.  Used in conjunction with `thenull`, aggregate p-values less than `1-alpha` are rejected and colored accordingly.
+#' @param thenull character string or `NULL`.  When unlabeled data is found within an `"cECM"` object, the name of one of the event categories can be provided as this argument.  When `"thenull"` is provided, unlabled data where the category hypothesis is rejected is colored red.
+#' @param alphatilde numeric value specifying hypothesis testing significance level.  Used in conjunction with `thenull`, aggregate p-values less than `1-alphatilde` are rejected and colored accordingly.
 #' @param ... arguments passed to [base::plot()]
 #'
 #' @details
 #'
 #' The plot generated from plot.ecm() is first dependent on if the provided `x$newdata` contains a data frame of unlabled data.
 #'
-#' If unlabled data is not part of the `"cecm"` object, the labled data is simply plotted with the 0.68 and 0.95 confidence levels obtained from the distribution fits returned from [p_agg()].
+#' If unlabled data is not part of the `"cECM"` object, the labled data is simply plotted with the 0.68 and 0.95 confidence levels obtained from the distribution fits returned from [cECM()].
 #'
-#' If unlabled data ***is*** part of the `"cecm"` object, the unlabled data is plotted in addition to the distribution plots.  Each unlabled data point appears on the plot as an integer, which indexes the corresponding row of `x$newdata`.
+#' If unlabled data ***is*** part of the `"cECM"` object, the unlabled data is plotted in addition to the distribution plots.  Each unlabled data point appears on the plot as an integer, which indexes the corresponding row of `x$newdata`.
 #'
-#' If, in addition, the argument `thenull` provides an event category, and `alpha` provides a rejection rule, each unlabled data point will be colored red if the null hypothesis is rejected at the level of `1-alpha`.
-#'
-#' @return Plot illustrating results of ECM
+#' @return Plot illustrating results of [cECM()]
 #' @export
 #'
 #' @importFrom grDevices hcl.colors
@@ -30,9 +28,9 @@
 #' @importFrom ellipse ellipse
 #' @importFrom stats cor cov2cor
 #'
-#' @method plot cecm
+#' @method plot cECM
 #'
-plot.cecm <- function(x, discriminants = c(1,2), thenull = NULL, alpha = 0.95,...){
+plot.cECM <- function(x, discriminants = c(1,2), thenull = NULL, alphatilde = 0.95,...){
 
     ## Ensuring par settings are not changed upon exit
     opar <- graphics::par(no.readonly = TRUE)
@@ -162,7 +160,7 @@ plot.cecm <- function(x, discriminants = c(1,2), thenull = NULL, alpha = 0.95,..
             newdata.filled[is.na(newdata.filled[,i]),i] <- x$rda_fit$means[which(row.names(x$rda_fit$means) == i), which(colnames(x$rda_fit$means) == thenull)]
           }
 
-          failed <- which(x$p_agg[, thenull] < 1-alpha)
+          failed <- which(x$cECM[, thenull] < 1-alphatilde)
 
           graphics::text(newdata.filled[-failed, discriminants[1]], newdata.filled[-failed, discriminants[2]], labels = (1:nrow(x$newdata))[-failed], adj = c(0.5, 0.5))
           graphics::text(newdata.filled[failed, discriminants[1]], newdata.filled[failed, discriminants[2]], labels = (1:nrow(x$newdata))[failed], adj = c(0.5, 0.5), col = "red")

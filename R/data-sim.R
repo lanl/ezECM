@@ -40,13 +40,12 @@
 #'
 #'  Under the null hypothesis that the event is an explosion, (and therefore the true polarity of first motion is always one), the error rate for mistakenly identifying the polarity of first motion is stipulated as the argument `first.polarity$read.err`.  For an error rate of \eqn{\theta} the p-value can then be calculated as follows:
 #'
-#'  \deqn{\sum_{i = 0}^n \binom{N}{i} \theta^i(1-\theta)^{N-i}}
+#'  \deqn{\sum_{i = 0}^n {N \choose i} \theta^i(1-\theta)^{N-i}}
 #'
 #'  Where \eqn{n} is the number of stations where a positive first motion was observed, and \eqn{N} is the total number of stations.
 #'
-#' @param sims numeric stipulating the number of individual simulations to run
-#' @param grid.dim numeric 3-vector providing the extent of the coordinate system in `c(X,Y,Z)` to be used.
-#' @param transform logical indicating if the simulated p-values should be transformed by the function `(2/pi)*asin(sqrt(X))`.  Typically the default (`FALSE`) value should be use and transformation should be done using the `transform` argument of [p_agg].
+#' @param sims numeric stipulating the number of individual events to generate.
+#' @param grid.dim numeric 3-vector providing the extent of the coordinate system in `c(X,Y,Z)` to be used in km.
 #' @param seismometer list stipulating variables relating to the seismometers. Providing an incomplete list reverts to the default values.  List elements are:
 #'   *  `N` a numeric stipulating the number of seismometers
 #'   *  `max.depth` is a numeric providing the maximum depth for a seismometer location in km
@@ -54,7 +53,7 @@
 #'   *  `sig.draws`  a numeric 2-vector, if `Sig` is not provided the variance in arrival time at each station is drawn from [MCMCpack::rinvgamma()] using `shape = sig.draws[1]` and `scale = sig.draws[2]`.
 #' @param explosion list stipulating variables regarding a detonation event. Providing an incomplete list reverts to the default values.  List elements are:
 #'   *  `max.depth` is a numeric providing the maximum depth of an explosion in km
-#'   *  `prob`  is the probability of an explosion in the interval \eqn{[0,1]}
+#'   *  `prob`  is the probability of an explosion, controlling the fraction of events which are explosions.  Value provided must be in the interval \eqn{[0,1]}
 #' @param pwave.arrival list stipulating variables regarding the depth from p-wave arrival discriminant. Providing an incomplete list reverts to the default values.  List elements are:
 #'   *  `H0` a numeric providing the value of depth in km for the null hypothesis
 #'   *  `V`  a numeric stipulating the velocity of p-waves in km.  Used for simulating p-wave arrival times as an argument of [time_fn()].
@@ -78,7 +77,7 @@
 #' test.data <- pval_gen(sims = 5)
 #'
 #'
-pval_gen <- function(sims = 100, grid.dim = c(800, 800, 30), transform = FALSE,
+pval_gen <- function(sims = 100, grid.dim = c(800, 800, 30),
                      seismometer = list(N = 100, max.depth = 2, Sig = NULL, sig.draws = c(15,2)),
                      explosion = list(max.depth = 5, prob = 0.4),
                      pwave.arrival = list(H0 = 5, V = 5.9, optim.starts = 15),
@@ -300,11 +299,6 @@ pval_gen <- function(sims = 100, grid.dim = c(800, 800, 30), transform = FALSE,
 
   p.mat[,1:2] <- apply(p.mat[,1:2], 2, as.numeric)
 
-  if(transform == TRUE){
-    p.mat[,1:2] <- apply(p.mat[,1:2], 2, function(X){
-      return((2/pi)*asin(sqrt(X)))
-    })
-  }
 
   formals(time_fn)$V <- V.save
 

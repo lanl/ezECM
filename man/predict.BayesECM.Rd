@@ -7,32 +7,32 @@
 \method{predict}{BayesECM}(object, Ytilde, thinning = 1, mixture_weights = "training", ...)
 }
 \arguments{
-\item{object}{an object of \code{class} \code{"BayesECM"} obtained as the trained model output from the \code{\link[=BayesECM]{BayesECM()}} function.}
+\item{object}{an object of \code{class} \code{"BayesECM"} obtained as the trained model output using the \code{\link[=BayesECM]{BayesECM()}} function.}
 
-\item{Ytilde}{\code{data.frame} of unlabeled observations to be categorized.  Must contain the same discriminant names as the training data used in the provided "BayesECM" object.  Each row is an individual event.  Missing data is specified with \code{NA}}
+\item{Ytilde}{\code{data.frame} of unlabeled observations to be categorized.  Must contain the same discriminant names as the training data used in the provided "BayesECM" object.  Each row is an individual observation.  Missing data is specified with \code{NA}}
 
 \item{thinning}{integer, scalar.  Values greater than one can be provided to reduce computation time.  See details.}
 
-\item{mixture_weights}{character string describing the weights of the distributions in the mixture to be used for prediction.  The default,\code{"training"} will utilize weights according to likelihood and prior specifications, while supplying the string \code{"equal"} will assume the prior predictive category is independent of the training data and utilize equal weights.}
+\item{mixture_weights}{character string describing the weights of the distributions in the mixture to be used for prediction.  The default,\code{"training"} will utilize weights according to likelihood and prior specifications, while supplying the string \code{"equal"} will assume the marginal predictive distribution of each category is independent of the data and utilize equal weights.}
 
 \item{...}{not used}
 }
 \value{
-Returns a list of length \code{nrow(Ytilde)}, with each element of the list corresponding to an individual event provided by the \code{Ytilde} \code{data.frame}.  Each list element is a matrix, with each row of the matrix corresponding to an event category.  Each column is a length \eqn{K} sample of \eqn{p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta})}, i.e. the probability of the event belonging to the row-specified event category.  See details for a further description.
+Returns a list of length \code{nrow(Ytilde)}.  Each list element is a matrix, with each row of the matrix corresponding to an event category.  Each column is a length \eqn{K} sample of \eqn{p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
 }
 \description{
 New Event Categorization With Bayesian Inference
 }
 \details{
-Before the data in \code{Ytilde} is used with the model, the p-values \eqn{\in (0,1]} must be transformed with the same function used on the training data to compute \code{object}.  The transform is automatically chosen to be the same as the \code{object} resulting from the trianing step.
+The data in \code{Ytilde} should be the p-values \eqn{\in (0,1]}.  The transformation applied to the data used to generate \code{object} is automatically applied to \code{Ytilde} within the \code{predict.BayesECM()} function.
 
-For a given event with an unknown category, a Bayesian ECM model seeks to predict the distribution of latent variable \eqn{\mathbf{z}_K}, where \eqn{\mathbf{z}_K} is a vector of the length \eqn{K} and \eqn{K} is the number of event categories.  A single observation of \eqn{\mathbf{z}_K} contains a single value of 1, and is zero for the remaining entries, drawn from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution} conditioned on a probability for each category.  The index of the 1 corresponds to an event category.
+For a given event with an unknown category, a Bayesian ECM model seeks to predict the distribution of latent variable \eqn{\tilde{\mathbf{z}}_K}, where \eqn{\tilde{\mathbf{z}}_K} is a vector of the length \eqn{K}, and \eqn{K} is the number of event categories.  A single observation of \eqn{\tilde{\mathbf{z}}_K} is a draw from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution}.
 
-The probabilities stipulated within the categorical distribution of \eqn{\mathbf{z}_K} are treated as unknown random variables inferred from the training data, prior hyperparameters, and independently each row of \code{Ytilde}. The output from \code{\link[=predict.BayesECM]{predict.BayesECM()}} are draws from the distribution of \eqn{\mathbb{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta})}.
+The probabilities stipulated within the categorical distribution of \eqn{\tilde{\mathbf{z}}_K} are conditioned on any imputed missing data, prior hyperparameters, and individually each row of \code{Ytilde}. The output from \code{\link[=predict.BayesECM]{predict.BayesECM()}} are draws from the distribution of \eqn{\mathbf{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{Psi}, \mathbf{\nu}, \mathbf{alpha}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
 
-The argument \code{mixture_weights} controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\theta})}, the distribution of \eqn{\tilde{\mathbf{z}}_K} before \eqn{\tilde{\mathbf{y}}_{\tilde{p}}} is observed.  Using \code{"training"} is best when the ratio of category observations is similar for the training data and the new observations \code{Ytilde}.  If the ratios of category observations are drastically different, it may be beneficial to use \code{"equal"}, which sets \eqn{p(\tilde{\mathbf{z}}_K| \mathbf{\theta}) = (1/K) \mathbf{1}^{\top}_K}.
+The argument \code{mixture_weights} controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\alpha})}, the predictive category probability marginalized over \eqn{\tilde{\mathbf{y}}_p}.  Using \code{"training"} is best when the ratio of category observations is similar for the training data and the new observations \code{Ytilde}.  If the ratios of category observations are drastically different, it may be beneficial to use \code{"equal"}, which sets \eqn{p(\tilde{\mathbf{z}}_K) = (1/K) \mathbf{1}^{\top}_K}.
 
-To save computation time, the user can specify an integer value for \code{thinning} greater than one.  Every \code{thinning}th Markov-Chain Monte-Carlo sample gathered by the previous call to \code{\link[=BayesECM]{BayesECM()}} will be used within \code{\link[=predict.BayesECM]{predict.BayesECM()}}.  This lets the user take a large number of samples during the training step, allowing for better mixing, and then use less samples when categorizing unlabled data for a faster computation time with good mixing.
+To save computation time, the user can specify an integer value for \code{thinning} greater than one.  Every \code{thinning}th Markov-chain Monte-Carlo sample is used for prediction.  This lets the user take a large number of samples during the training step, allowing for better mixing.  See details in a package vignette by running \code{vignette("syn-data-code", package = "ezECM")}
 }
 \examples{
 

@@ -7,26 +7,26 @@
 
 #' New Event Categorization With Bayesian Inference
 #'
-#' @param object an object of `class` `"BayesECM"` obtained as the trained model output from the [BayesECM()] function.
-#' @param Ytilde `data.frame` of unlabeled observations to be categorized.  Must contain the same discriminant names as the training data used in the provided "BayesECM" object.  Each row is an individual event.  Missing data is specified with `NA`
+#' @param object an object of `class` `"BayesECM"` obtained as the trained model output using the [BayesECM()] function.
+#' @param Ytilde `data.frame` of unlabeled observations to be categorized.  Must contain the same discriminant names as the training data used in the provided "BayesECM" object.  Each row is an individual observation.  Missing data is specified with `NA`
 #' @param thinning integer, scalar.  Values greater than one can be provided to reduce computation time.  See details.
-#' @param mixture_weights character string describing the weights of the distributions in the mixture to be used for prediction.  The default,`"training"` will utilize weights according to likelihood and prior specifications, while supplying the string `"equal"` will assume the prior predictive category is independent of the training data and utilize equal weights.
+#' @param mixture_weights character string describing the weights of the distributions in the mixture to be used for prediction.  The default,`"training"` will utilize weights according to likelihood and prior specifications, while supplying the string `"equal"` will assume the marginal predictive distribution of each category is independent of the data and utilize equal weights.
 #' @param ... not used
 #'
-#' @return Returns a list of length `nrow(Ytilde)`, with each element of the list corresponding to an individual event provided by the `Ytilde` `data.frame`.  Each list element is a matrix, with each row of the matrix corresponding to an event category.  Each column is a length \eqn{K} sample of \eqn{p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta})}, i.e. the probability of the event belonging to the row-specified event category.  See details for a further description.
+#' @return Returns a list of length `nrow(Ytilde)`.  Each list element is a matrix, with each row of the matrix corresponding to an event category.  Each column is a length \eqn{K} sample of \eqn{p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
 #' @export
 #'
 #' @details
 #'
-#' Before the data in `Ytilde` is used with the model, the p-values \eqn{\in (0,1]} must be transformed with the same function used on the training data to compute `object`.  The transform is automatically chosen to be the same as the `object` resulting from the trianing step.
+#' The data in `Ytilde` should be the p-values \eqn{\in (0,1]}.  The transformation applied to the data used to generate `object` is automatically applied to `Ytilde` within the `predict.BayesECM()` function.
 #'
-#' For a given event with an unknown category, a Bayesian ECM model seeks to predict the distribution of latent variable \eqn{\mathbf{z}_K}, where \eqn{\mathbf{z}_K} is a vector of the length \eqn{K} and \eqn{K} is the number of event categories.  A single observation of \eqn{\mathbf{z}_K} contains a single value of 1, and is zero for the remaining entries, drawn from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution} conditioned on a probability for each category.  The index of the 1 corresponds to an event category.
+#' For a given event with an unknown category, a Bayesian ECM model seeks to predict the distribution of latent variable \eqn{\tilde{\mathbf{z}}_K}, where \eqn{\tilde{\mathbf{z}}_K} is a vector of the length \eqn{K}, and \eqn{K} is the number of event categories.  A single observation of \eqn{\tilde{\mathbf{z}}_K} is a draw from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution}.
 #'
-#' The probabilities stipulated within the categorical distribution of \eqn{\mathbf{z}_K} are treated as unknown random variables inferred from the training data, prior hyperparameters, and independently each row of `Ytilde`. The output from [predict.BayesECM()] are draws from the distribution of \eqn{\mathbb{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\theta})}.
+#' The probabilities stipulated within the categorical distribution of \eqn{\tilde{\mathbf{z}}_K} are conditioned on any imputed missing data, prior hyperparameters, and individually each row of `Ytilde`. The output from [predict.BayesECM()] are draws from the distribution of \eqn{\mathbf{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{Psi}, \mathbf{\nu}, \mathbf{alpha}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
 #'
-#' The argument `mixture_weights` controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\theta})}, the distribution of \eqn{\tilde{\mathbf{z}}_K} before \eqn{\tilde{\mathbf{y}}_{\tilde{p}}} is observed.  Using `"training"` is best when the ratio of category observations is similar for the training data and the new observations `Ytilde`.  If the ratios of category observations are drastically different, it may be beneficial to use `"equal"`, which sets \eqn{p(\tilde{\mathbf{z}}_K| \mathbf{\theta}) = (1/K) \mathbf{1}^{\top}_K}.
+#' The argument `mixture_weights` controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\alpha})}, the predictive category probability marginalized over \eqn{\tilde{\mathbf{y}}_p}.  Using `"training"` is best when the ratio of category observations is similar for the training data and the new observations `Ytilde`.  If the ratios of category observations are drastically different, it may be beneficial to use `"equal"`, which sets \eqn{p(\tilde{\mathbf{z}}_K) = (1/K) \mathbf{1}^{\top}_K}.
 #'
-#' To save computation time, the user can specify an integer value for `thinning` greater than one.  Every `thinning`th Markov-Chain Monte-Carlo sample gathered by the previous call to [BayesECM()] will be used within [predict.BayesECM()].  This lets the user take a large number of samples during the training step, allowing for better mixing, and then use less samples when categorizing unlabled data for a faster computation time with good mixing.
+#' To save computation time, the user can specify an integer value for `thinning` greater than one.  Every `thinning`th Markov-chain Monte-Carlo sample is used for prediction.  This lets the user take a large number of samples during the training step, allowing for better mixing.  See details in a package vignette by running \code{vignette("syn-data-code", package = "ezECM")}
 #'
 #' @examples
 #'
@@ -85,52 +85,51 @@ predict.BayesECM <- function(object, Ytilde, thinning = 1, mixture_weights = "tr
 
 #' Bayesian Event Matrix Categorization
 #'
-#' Training a Bayesian ECM model
+#' Training a Bayesian ECM (B-ECM) model
 #'
 #' @details
 #'
-#' The output of `BayesECM()` provides a fitted Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in `Y`, these values are imputed.  If no values are missing, training is perceptually instantaneous for all but very large data sets.  The next step for categorization is prediction of the category of a new observation, via the [predict.BayesECM()] function.
+#' The output of `BayesECM()` provides a trained Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in `Y`, these values are imputed.  A trained `BayesECM` model is then used with the [predict.BayesECM()] function to categorize new observations.
 #'
-#' ##  Data Prep
+#' ##  Data Preparation
 #'
 #' Before the data in `Y` is used with the model, the p-values \eqn{\in (0,1]} are transformed in an effort to better align the data with some properties of the normal distribution.  When `transform == "logit"` the inverse of the logistic function \eqn{Y_{N \times p} = \log\left(\texttt{Y}\right) - \log\left(1-\texttt{Y}\right)} maps the values to the real number line.  Values of `Y` exactly equal to 0 or 1 cannot be used when `transform == "logit"`.  Setting the argument `transform == "arcsin"` uses the transformation \eqn{Y_{N\times p} = 2/\pi \times \mathrm{arcsin}\sqrt{Y}} further described in \insertCite{anderson2007mathematical;textual}{ezECM}.  From here forward, the variable \eqn{Y_{N \times p}} should be understood to be the transformation of `Y`, where \eqn{N} is the total number of rows in `Y` and \eqn{p} is the number of discriminant columns in `Y`.
 #'
 #'  ## The Model
 #'
-#' The B-ECM model structure can be found in a future publication with the working title "Bayesian Event Categorization Matrix Approach for Nuclear Detonations".  Some details from this publication are reproduced here.
+#' The B-ECM model structure can be found in a future publication, with some details from this publication are reproduced here.
 #'
-#' Bayesian ECM assumes that all data is generated using a mixture of \eqn{K} normal distributions, each with a mean of \eqn{\mu_k}, a covariance of \eqn{\Sigma_k}.  Each event category is represented by one of the \eqn{K} distributions.
+#' B-ECM assumes that all data is generated using a mixture of \eqn{K} normal distributions, where \eqn{K} is equal to the number of unique event categories. Each component of the mixture has a unique mean of \eqn{\mu_k}, and covariance of \eqn{\Sigma_k}, where \eqn{k \in \{1 , \dots , K\}} indexes the mixture component.  The likelihood of the \eqn{i^{\mathrm{th}}} event observation \eqn{y^i_p} of \eqn{p} discriminants can be written as the sum below.
 #'
 #' \deqn{\sum_{k = 1}^K \pi_k \mathcal{N}(y^i_p; \mu_k, \Sigma_k)}
 #'
-#' Each Gaussian distribution in the sum is normalized by \eqn{\pi_k}, where \eqn{\sum_{k=1}^K \pi_k =1}.  \eqn{y^i_p} corresponds to a vector of length \eqn{p}.
+#' Each Gaussian distribution in the sum is weighted by the scalar variable \eqn{\pi_k}, where \eqn{\sum_{k=1}^K \pi_k =1} so that the density integrates to 1.
 #'
-#' There are prior distributions on each \eqn{\mu_k, \Sigma_k}, and \eqn{\pi}.  These prior distributions are detailed below.  The posterior distributions of these parameters, given \eqn{Y_{N \times p}}, is integrated over analytically, which reduces computation time for training.  Integration results in the marginal likelihood of each component in the mixture to be matrix t-distributed.
+#' There are prior distributions on each \eqn{\mu_k, \Sigma_k}, and \eqn{\pi}, where \eqn{\pi} is the vector of mixture weights \eqn{\{\pi_1, \dots , \pi_K\}}.  These prior distributions are detailed below.  These parameters are important for understanding the model, however they are integrated out analytically to reduce computation time, resulting in a marginal likelihood \eqn{p(Y_{N_k \times p}|\eta_k, \Psi_k, \nu_k)} which is a mixture of matrix t-distributions.  \eqn{Y_{N_k \times p}} is a matrix of the total data for the \eqn{k^{\mathrm{th}}} event category containing \eqn{N_k} total event observations for training.  The totality of the training data can be written as \eqn{Y_{N \times p}}, where \eqn{N = N_1 + \dots + N_K}.
 #'
-#' `BayesECM()` can handle observations where only some of the \eqn{p} discriminants have been observed, by imputing these missing values given the rest of the data.  The properties of the conditional matrix t-distribution are used in this step.
+#' `BayesECM()` can handle observations where some of the \eqn{p} discriminants of an observation are missing.  The properties of the conditional matrix t-distribution are used to impute the missing values, thereby accounting for the uncertainty related to the missing data.
 #'
 #' ##  Prior Distributions
 #'
-#' The distributions  \eqn{p(\mu_k|Y_{N_k \times p})}, \eqn{p(\Sigma|Y_{N_k \times p})}, and \eqn{p(\pi|Y_{N \times p})} are dependent on the specifications of prior distributions  \eqn{p(\mu|\Sigma, \eta_k)}, \eqn{p(\Sigma| \Psi_k, \nu_k)}, and \eqn{p(\pi|\alpha)}.  The ability to use `"default"` priors has been included for ease of use.
+#'  The posterior distributions  \eqn{p(\mu_k|Y_{N_k \times p}, \eta_k)}, \eqn{p(\Sigma_k|Y_{N_k \times p}, \Psi_k, \nu_k)}, and \eqn{p(\pi|Y_{N \times p}, \alpha)} are dependent on the specifications of prior distributions \eqn{p(\mu_k|\Sigma_k, \eta_k)}, \eqn{p(\Sigma_k| \Psi_k, \nu_k)}, and \eqn{p(\pi|\alpha)}.
 #'
-#' \eqn{p(\mu_k|\Sigma_k, \eta_k)} is a multivariate normal distribution with a mean of \eqn{\eta_k} and is conditional on the covariance \eqn{\Sigma_k}.   \eqn{p(\Sigma_k|\nu_k, \Psi_k)} to be equivalent, as an \href{https://en.wikipedia.org/wiki/Wishart_distribution}{Inverse Wishart} distribution with degrees of freedom parameter \eqn{\nu}, or `nu`, and scale matrix \eqn{\Psi}, or `Psi`.  \eqn{p(\pi)} is a \href{https://en.wikipedia.org/wiki/Dirichlet_distribution}{Dirichlet distribution} with the parameter vector \eqn{\alpha} of length \eqn{K}.
+#'  \eqn{p(\mu_k|\Sigma_k, \eta_k)} is a multivariate normal distribution with a mean vector of \eqn{\eta_k} and is conditional on the covariance \eqn{\Sigma_k}.   \eqn{p(\Sigma_k|\Psi_k, \nu_k)} is an \href{https://en.wikipedia.org/wiki/Wishart_distribution}{Inverse Wishart} distribution with degrees of freedom parameter \eqn{\nu_k}, or `nu`, and scale matrix \eqn{\Psi_k}, or `Psi`.  \eqn{p(\pi|\alpha)} is a \href{https://en.wikipedia.org/wiki/Dirichlet_distribution}{Dirichlet distribution} with the parameter vector \eqn{\alpha} of length \eqn{K}.
 #'
-#'. The defaults are \eqn{\eta_k} is a vector of zeros of length \eqn{p}, \eqn{\Psi_k} is the identity matrix, and each element of \eqn{alpha} is \eqn{K/2}. Use of default prior parameters for parameters and all event categories can be specified by setting the argument `priors = "default"`.  If all prior parameters are to be shared between all event categories, but some non-default values are desirable then supplying a list of a similar structure to `priors = list(eta = "default", Psi = "default", nu = 50, alpha = 10)` can be used, where `"default"` can be exchanged for the correct data structure for any of the parameters in the list and vice-versa.
+#' The ability to use `"default"` priors has been included for ease of use with various settings of the `priors` function argument.  The default prior hyperparameter values differ for the argument of `transform` used, and the values can be inspected by examining the output of the `BayesECM()` function.  Simply setting `priors = "default"` provides the same default values for all \eqn{\eta_k, \Psi_k, \nu_k} in the mixture.  If all prior parameters are to be shared between all event categories, but some non-default values are desirable then supplying a list of a similar structure as `priors = list(eta = rep(0, times = ncol(Y) - 1), Psi = "default", nu = "default", alpha = 10)` can be used, where setting a list element `"default"` can be exchanged for the correct data structure for the relevant data structure.
 #'
-#'  If one wishes to use some default values, but not share all parameter values between each event category, or wishes to specify each parameter value individually with no defaults, we suggest running and saving the output `BayesECM(Y = Y, BT = c(1,2))$priors`.  Modifying the elements of the list accordingly, and then setting the `priors` argument equal to the moddified list on a subsequent call to `BayesECM()` will produce the desired behavior.  Note that when specifying `eta` or `Psi` it is necessary that the row and column order of the supplied values corresponds to the column order of `Y`.
-#'
-#'  For user specified prior parameters, the current implementation of `BayesECM()` utilizes the same prior on each component of the mixture.  Inspection of the output of `BayesECM()` reveals how these parameters should be provided as the `priors` argument to a call of `BayesECM()`.
+#'  If one wishes to use some default values, but not share all parameter values between each event category, or wishes to specify each parameter value individually with no defaults, we suggest running and saving the output `BayesECM(Y = Y, BT = c(1,2))$priors`.  Note that when specifying `eta` or `Psi` it is necessary that the row and column order of the supplied values corresponds to the column order of `Y`.
 #'
 #'
-#' @param Y `data.frame` of training data, with rows corresponding to \eqn{N} individual events, and columns corresponding to \eqn{p} discriminants.  An additional column named `"event"` is required, which labels each row with the known event category.  Missing data is specified with `NA`.  `dim(Y)` must equal `c(N, p + 1)`.
-#' @param BT integer vector of length 2.  Used to specify the number `c("Burn-in", "Total")` Markov-Chain Monte-Carlo samples drawn.  `BT[1]` stipulates the number of initial *Burn-in* samples to discard, while `BT[2]` stipulates the total number of samples.
-#' @param priors list of parameters to be used in the prior distributions for model parameters.  See details.
-#' @param verb logical.  A setting of `TRUE` prints a progress bar as samples are drawn and warnings when they occur.
-#' @param transform character string specifying the transform to use on the elements of`Y` before fitting the model.  Options are `"logit"` and `"arcsin"` with `"logit"` being the default.  See details.
+#'
+#' @param Y `data.frame` of training data, with rows corresponding to \eqn{N} individual observations, and columns corresponding to \eqn{p} discriminants.  An additional column named `"event"` is required, which labels each row with the known event category.  Missing data is specified with `NA`.  `dim(Y)` must equal `c(N, p + 1)`.
+#' @param BT integer vector of length 2, stipulating the number of `c("Burn-in", "Total")` Markov-Chain Monte-Carlo samples drawn.
+#' @param priors list of parameters to be used in prior distributions.  See details.
+#' @param verb logical.  A setting of `TRUE` prints a progress bar as samples are drawn, as well as warnings when they occur.
+#' @param transform character string specifying the transform to use on the elements of `Y` before fitting the model.  Options are `"logit"` and `"arcsin"` with `"logit"` being the default.  See details.
 #'
 #' @return
 #'
-#' Returns an object of `class("BayesECM")`.  If there are missing data in the supplied argument `Y` the object contains Markov-Chain Monte-Carlo samples of the imputed missing data.  Prior distribution parameters used are always included in the output.  The primary use of an object returned from [BayesECM()] is to later use this object to categorize unlabeled data with the [predict.BayesECM()] function.
+#' Returns an object of `class("BayesECM")`.  If there are missing data in the supplied argument `Y` the object contains Markov-chain Monte-Carlo samples of the imputed missing data.  Prior distribution parameters used are always included in the output.  The primary use of an object returned from [BayesECM()] is to later use this object to categorize unlabeled data with the [predict.BayesECM()] function.
 #'
 #' @importFrom Rdpack reprompt
 #'
@@ -407,6 +406,7 @@ BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats
   pvec <- 1:p
   Ip <- diag(p)
   Yimpute <- list()
+  ## below varibale?
   Ydrawn <- Y
   NSighat <- (N + 2)/(N + 1)
 
@@ -936,7 +936,7 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
 #'
 #' ## Typicality
 #'
-#' Typicality indices are used in [cecm_decision()] as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  `summary.BayesECMpred` prints the expected typicality related to the training data as a whole.  The expectation is taken over the full mixture of predictive distributions.  When `summary.BayesECMpred` is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
+#' Typicality indices are used in [cECM_decision()] as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  `summary.BayesECMpred` prints the expected typicality related to the training data as a whole.  Note that expected typicality is different than what is recommended, and likely this feature will be depreciated after further development.  The expectation is taken over the full mixture of predictive distributions.  When `summary.BayesECMpred` is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
 #'
 #' @examples
 #'
@@ -1123,7 +1123,7 @@ cat(paste0("Decision Criterion: select ", category, " if E[p(", category, ")] ",
 
 #' Plot the results from Bayesian ECM
 #'
-#' Plots predictive densities of probabilities a new uncategorized event is from each category of interest obtained from the [predict.BayesECM()] function.
+#' Plots predictive densities of category probabilities event is from each category of interest obtained from the [predict.BayesECM()] function.
 #'
 #' @param x an object of `class` `"BayesECMpred"` obtained as the trained model output from the [predict.BayesECM()] function.
 #' @param index integer corresponding to the row number of `Ytilde` provided to [predict.BayesECM()] to be plotted.
@@ -1132,7 +1132,7 @@ cat(paste0("Decision Criterion: select ", category, " if E[p(", category, ")] ",
 #' @param features character vector specifying ploting features to include.  `"Expectation line"` plots a vertical line located at the expectation of each category distribution.  `"Expectation text"` prints the expected value of each category distribution.  Setting `features = NULL` will remove the labels and lines for the expectations of the distributions.
 #' @param ... additional arguments passed to the generic [base::plot()] function.
 #'
-#' @return Plot showing densities and expectations that the stipulated uncategorized event belongs to each category.
+#' @return Plot showing densities and expectations for each event category for the stipulated event.
 #' @export
 #'
 #'
@@ -1228,15 +1228,15 @@ plot.BayesECMpred <- function(x, index = 1, colpal = "Zissou1", cat_labels = row
 
 #' B-ECM performance metrics
 #'
-#' Outputs batch performance metrics of decisions using the output of [predict.BayesECM()]
+#' Outputs batch performance metrics of decisions using the output of [predict.BayesECM()] when the true category of testing events are known.  Can be used for empirically comparing different model fits.
 #'
-#' @param bayes_pred An object of class `"BayesECMpred"` returned from the [predict.BayesECM()] function.  Includes the results of a trained model and prediction on data where the true category is unknown.
-#' @param vic Character of length 1, indicating the "Very Important Category" (`vic`) used for calculating categorization metrics.  The return of `becm_decision` provides information on if new observations should be categorized into `vic` or the remainder of the training categories grouped together.
+#' @param bayes_pred An object of class `"BayesECMpred"` returned from the [predict.BayesECM()] function.  Data and order of data provided to [predict.BayesECM()] much that of the `cat_truth` argument.
+#' @param vic Character string, indicating the "Very Important Category" (`vic`) used for calculating categorization metrics.  The return of `becm_decision()` provides information on if new observations should be categorized into `vic` or the remainder of the training categories grouped together.
 #' @param cat_truth Vector of the same length as `nrow(bayes_pred$Ytilde)`, where `Ytilde` was previously supplied to the [predict.BayesECM()] function.  Used for accuracy calculations of a `BayesECM` fit and decision criteria when the true category of the new observations are known.
-#' @param alpha Numeric scalar between 0 and 1 used for the significance level for typicality indices.
-#' @param pn Logical; `pn == FALSE` indicates that only accuracy of categorizations should be returned, while `pn == TRUE` indicates that false positives and false negatives should be returned in addition to accuracy.
+#' @param alphatilde Numeric scalar between 0 and 1 used for the significance level of typicality indices.
+#' @param pn Logical.  Acronym for "false Positive, false Negative". `pn == FALSE` indicates that only accuracy of categorizations should be returned, while `pn == TRUE` indicates that false positives and false negatives should be returned in addition to accuracy.
 #' @param C Square matrix of dimension 2 or the number of categories.  Used as the loss function in the decision theoretic framework.  The default is 0-1 loss for binary categorization.
-#' @param rej `data.frame` of rejection via typicality index retrieved from a previous call to `becm_decision()`.  Useful for saving computation time when comparing the results from different loss matrices, supplied by the argument `C`, while using the same value of `alpha`.
+#' @param rej `data.frame` of rejection via typicality index retrieved from a previous call to `becm_decision()`.  Useful for saving computation time when comparing the results from different supplied matrices for argument `C`, while using a constant value of `alphatilde`.
 #'
 #' @return A list of two data frames of logicals.  The rows in each data frame correspond to the rows in `bayes_pred$Ytilde`.  The first data frame, named `results`, has three columns named `correct`, `fn`, and `fp`. The `results` column indicates if the categorization is correct.  `fn` and `fp` stand for false negatives and false positives respectively.  `fn` and `fp` are found under binary categorization.  Values of `NA` are returned when a false positive or false negative is not relevant.  The second data frame, named `rej`, indicates the rejection of each new observation from each category via typicality index.  One can use `rej` to inspect if the typicality index played a role in categorization, or to supply to another call of `becm_decision`.
 #'
@@ -1246,18 +1246,18 @@ plot.BayesECMpred <- function(x, index = 1, colpal = "Zissou1", cat_labels = row
 #'
 #' @export
 #'
-becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alpha = 0.05, pn = TRUE, C = matrix(c(0,1,1,0), ncol = 2), rej = NULL){
+becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alphatilde = 0.05, pn = TRUE, C = matrix(c(0,1,1,0), ncol = 2), rej = NULL){
 
   if(!inherits(bayes_pred, "BayesECMpred")){
     stop("Argument 'bayes_pred' must be the output of the predict.BayesECM function.")
   }
 
-  if(length(alpha) != 1 | !is.numeric(alpha)){
-    stop("Argument 'alpha' must be a numeric of length 1.")
+  if(length(alphatilde) != 1 | !is.numeric(alphatilde)){
+    stop("Argument 'alphatilde' must be a numeric of length 1.")
   }
 
-  if(alpha > 1 | alpha < 0){
-    stop("Argument 'alpha' must be a value betweeen 0 and 1.")
+  if(alphatilde > 1 | alphatilde < 0){
+    stop("Argument 'alphatilde' must be a value betweeen 0 and 1.")
   }
 
   if(length(vic) != 1 ){
@@ -1287,10 +1287,10 @@ becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alpha
 
 
   if(is.vector(bayes_pred$Zdist[[1]])){
-    out <- becm_decision_fulltraining(bayes_pred = bayes_pred, alpha = alpha, vic = vic, cat_truth = cat_truth, pn = pn, C = C, rej = rej)
+    out <- becm_decision_fulltraining(bayes_pred = bayes_pred, alphatilde = alphatilde, vic = vic, cat_truth = cat_truth, pn = pn, C = C, rej = rej)
   }else{
 
-    out <- becm_decision_missingtraining(bayes_pred = bayes_pred, alpha = alpha, vic = vic, cat_truth = cat_truth, pn = pn, C = C, rej = rej)
+    out <- becm_decision_missingtraining(bayes_pred = bayes_pred, alphatilde = alphatilde, vic = vic, cat_truth = cat_truth, pn = pn, C = C, rej = rej)
 
   }
 
@@ -1300,7 +1300,7 @@ becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alpha
 }
 
 
-becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NULL, cat_truth = NULL, pn = NULL, C = NULL, rej = NULL){
+becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic = NULL, cat_truth = NULL, pn = NULL, C = NULL, rej = NULL){
 
   K <- length(bayes_pred$BayesECMfit$Y)
 
@@ -1416,7 +1416,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NU
           pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
         }
       }
-      rej[,k] <- pvals <= alpha
+      rej[,k] <- pvals <= alphatilde
     }
   }else{
     if(length(bayes_pred$umissing[[1]]) == 0){
@@ -1440,7 +1440,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NU
         pvals <- stats::pf(pvals*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
 
 
-        rej[,k] <- pvals <= alpha
+        rej[,k] <- pvals <= alphatilde
 
       }
 
@@ -1467,7 +1467,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NU
 
   ### 2)  Compute the typicality index
   ### 3a) If p(vic) < p(not vic) declare not a detonation
-  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alpha
+  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alphatilde
   ### 3c) If not rejected, declare a detonation
   ### 3d) If rejected, declare not a detonation
   ### 3e) If rejected from all categories, declare an outlier wrt the training data
@@ -1516,7 +1516,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alpha = NULL, vic = NU
 
 }
 
-becm_decision_missingtraining <- function(bayes_pred = NULL, alpha = NULL, vic = NULL, cat_truth = NULL, pn = NULL, C = NULL, rej = NULL){
+becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, vic = NULL, cat_truth = NULL, pn = NULL, C = NULL, rej = NULL){
 
   K <- length(bayes_pred$BayesECMfit$Y)
 
@@ -1647,7 +1647,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alpha = NULL, vic =
           pvals[ind] <-stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
         }
       }
-      rej[,k] <- pvals <= alpha
+      rej[,k] <- pvals <= alphatilde
     }
     for(k in Kmissing){
 
@@ -1693,7 +1693,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alpha = NULL, vic =
               return(tySiy/ptil)
             }, S = Siguse, ptil = ptilde, m = muuse)
 
-            pvals[ind,i] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+            pvals[ind,i] <- stats::pf(pvals[ind,i]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
           }
         }
       }
@@ -1704,7 +1704,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alpha = NULL, vic =
         X <- X[!is.na(X)]
         FX <- sum(X < a)/length(X)
         return(FX)
-      }, a = alpha)
+      }, a = alphatilde)
 
 
       rej[,k] <- pvals > 0.5
@@ -1725,7 +1725,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alpha = NULL, vic =
 
   ### 2)  Compute the typicality index
   ### 3a) If p(vic) < p(not vic) declare not a detonation
-  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alpha
+  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alphatilde
   ### 3c) If not rejected, declare a detonation
   ### 3d) If rejected, declare not a detonation
   ### 3e) If rejected from all categories, declare an outlier wrt the training data

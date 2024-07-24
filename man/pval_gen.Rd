@@ -15,11 +15,11 @@ pval_gen(
 )
 }
 \arguments{
-\item{sims}{numeric stipulating the number of individual simulations to run}
+\item{sims}{numeric stipulating the number of individual events to generate.}
 
-\item{grid.dim}{numeric 3-vector providing the extent of the coordinate system in \code{c(X,Y,Z)} to be used.}
+\item{grid.dim}{numeric 3-vector providing the extent of the coordinate system in \code{c(X,Y,Z)} to be used in km.}
 
-\item{transform}{logical indicating if the simulated p-values should be transformed by the function \code{(2/pi)*asin(sqrt(X))}.  Typically the default (\code{FALSE}) value should be use and transformation should be done using the \code{transform} argument of \link{p_agg}.}
+\item{transform}{logical indicating if the simulated p-values should be transformed by the function \code{(2/pi)*asin(sqrt(X))}.  Typically the default (\code{FALSE}) value should be use and transformation should be done using the \code{transform} argument of \link{cECM}.}
 
 \item{seismometer}{list stipulating variables relating to the seismometers. Providing an incomplete list reverts to the default values.  List elements are:
 \itemize{
@@ -32,7 +32,7 @@ pval_gen(
 \item{explosion}{list stipulating variables regarding a detonation event. Providing an incomplete list reverts to the default values.  List elements are:
 \itemize{
 \item \code{max.depth} is a numeric providing the maximum depth of an explosion in km
-\item \code{prob}  is the probability of an explosion in the interval \eqn{[0,1]}
+\item \code{prob}  is the probability of an explosion, controlling the fraction of events which are explosions.  Value provided must be in the interval \eqn{[0,1]}
 }}
 
 \item{pwave.arrival}{list stipulating variables regarding the depth from p-wave arrival discriminant. Providing an incomplete list reverts to the default values.  List elements are:
@@ -85,7 +85,7 @@ This \eqn{T} statistic is then used to compute the p-value
 \section{Polarity of First Motion}{
 Under the null hypothesis that the event is an explosion, (and therefore the true polarity of first motion is always one), the error rate for mistakenly identifying the polarity of first motion is stipulated as the argument \code{first.polarity$read.err}.  For an error rate of \eqn{\theta} the p-value can then be calculated as follows:
 
-\deqn{\sum_{i = 0}^n \binom{N}{i} \theta^i(1-\theta)^{N-i}}
+\deqn{\sum_{i = 0}^n {N \choose i} \theta^i(1-\theta)^{N-i}}
 
 Where \eqn{n} is the number of stations where a positive first motion was observed, and \eqn{N} is the total number of stations.
 }

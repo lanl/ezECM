@@ -8,16 +8,16 @@
 #'
 #' Imports and organizes observed p-values located in a `*.csv` file for training or categorization using an existing model.
 #'
-#' The purpose of this function is to give the user a way to import p-value data in which the data will be organized for use with the [p_agg()] function.  Warnings are supplied when potential issues may arise with the supplied file, and the function attempts to detect and correct simple formatting issues.
+#' The purpose of this function is to give the user a way to import p-value data in which the data will be organized for use with the [cECM()] and [BayesECM()] functions.  Warnings are printed when potential issues may arise with the supplied file, and the function attempts to detect and correct simple formatting issues.
 #'
-#' Ideally, but not necessarily, the user supplies `import_pvals()` a `*.csv` file which contains a header labeling the columns as the first row.  Each column contains the p-values of a particular discriminant, and each row corresponds to a particular event.  If training data is to be imported, the column containing known event categories is labeled "events".  If new data is imported to be used with an existing model fit, the order of the columns in the `new.data` file must be the same as the `*.csv` file containing training data.
+#' Ideally, the user supplies a `*.csv` file which contains a header row labeling the columns.  Each column contains the p-values of a particular discriminant, and each row must correspond to a single event.  If training data is to be imported, the column containing known event categories is labeled `"event"`.  If new data is imported to be used with an existing model fit, the order of the columns in the `new.data` file must be the same as the `*.csv` file containing training data.
 #'
 #' @param file Character string providing name of `*.csv` file to be imported.  File name within current working directory or absolute path are acceptable.  Argument passed directly to [utils::read.csv()], see [utils::read.csv()] for details.
 #' @param header Logical indicating if first row of supplied `*.csv` file contains column names.  See [utils::read.csv()] for details.
 #' @param sep Character string indicating the field separator character for the supplied `*.csv` file.
 #' @param training Logical indicating if the supplied `*.csv` file is to be used as training data.  Only serves to suppress warnings.
 #'
-#' @return A data frame of p-values with each row corresponding to a particular event and each column corresponding to a particular discriminant.  If data labels are provided, an additional column will hold these values.
+#' @return A [base::data.frame()] of p-values with each row corresponding to a single event and each column corresponding to a particular discriminant.  If data labels are correctly provided in the supplied `*.csv` file, an additional column labeled `event` will hold these values.
 #' @export
 #'
 #' @importFrom utils read.csv
@@ -78,7 +78,7 @@ import_pvals <- function(file = NULL, header = TRUE, sep = ",", training = TRUE)
   if(any(names(dat) == "event")){
     if(sum(is.na(dat$event)) >= 1){
       if(training == TRUE){
-        warning("'event' column is missing data.  Supplied .csv data cannot be used to fit ECM model.")
+        warning("'event' column is missing data.  Supplied .csv data cannot be used to fit an ECM model.")
       }
     }
     dat <- dat[c(names(dat)[-which(names(dat) == "event")], "event")]
@@ -93,11 +93,11 @@ return(dat)
 #'
 #' @description
 #'
-#' `export_ecm()` saves an ECM model fit to training data for later use. The object can be the output of the [p_agg()] or [BayesECM()] functions.  Object saved in user specified location.
+#' `export_ecm()` saves an ECM model fit to training data for later use. The object can be the output of the [cECM()] or [BayesECM()] functions.  Object saved in user specified location.
 #'
 #' `import_ecm()` loads a previously exported ECM model into the global environment.
 #'
-#' @param x Name of ECM model to be exported. `class(x)` should be either `"c-ecm"` or `"BayesECM"`.
+#' @param x Name of ECM model to be exported. `class(x)` should be either `"cECM"` or `"BayesECM"`.
 #' @param file Character string containing absolute or relative path of `*.rda` file to be exported or imported.
 #'
 #' @return Saves file or imports file into global environment.
@@ -112,10 +112,15 @@ export_ecm <- function(x = NULL, file = stop("'file' must be specified")){
 
 }
 #' @rdname export_ecm
+#' @export
 import_ecm <- function(file = NULL){
 
-  temp_load <- load(file)
-  print("File successfully loaded")
+  if(file.exists(file)){
+    temp_load <- load(file)
+    print("File successfully loaded")
+  }else{
+    print("Cannot find file.  Check name and ensure the correct working directory is being used.")
+  }
 
   return(temp_load)
 
@@ -124,7 +129,7 @@ import_ecm <- function(file = NULL){
 #' @examples
 #'
 #' x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
-#' pval_cat <- p_agg(x = x, transform = TRUE)
+#' pval_cat <- cECM(x = x, transform = TRUE)
 #'
 #' export_ecm(x = pval_cat, file = "example-ecm.rda")
 #'
