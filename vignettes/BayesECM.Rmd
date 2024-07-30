@@ -102,7 +102,7 @@ newdata[9,2:3] <- NA
 
 # Loading a Previous `BayesECM` Model
 
-You may have quit RStudio or restarted your computer before running the initial model.  It will take less time to load the previously fit model back into the `R` global environment, than to reuse the `BayesECM` function.  Specifying the file path, the previously fit model can be loaded as such:
+It will take less time to load the previously fit model back into the `R` global environment, than to reuse the `BayesECM` function every time a new categorization is required.  Specifying the file path, the previously fit model can be loaded as such:
 
 ```{r eval = FALSE}
 BayesECM_fit <- import_ecm(file = "BayesECMfit.rda")
