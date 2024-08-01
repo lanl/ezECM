@@ -74,9 +74,9 @@ predict.BayesECM <- function(object, Ytilde, thinning = 1, mixture_weights = "tr
     stop(paste0("Error: the argument 'mixture_weights' must be either 'training' or 'equal'. ", mixture_weights, " is not a valid specification."))
   }
 
- Zdist <- BayesECM_pred(BayesECM_obj = object, Ytilde = Ytilde, thinning = thinning, eq_wts = eq_wts)
+ epz <- BayesECM_pred(BayesECM_obj = object, Ytilde = Ytilde, thinning = thinning, eq_wts = eq_wts)
 
- predout <- structure(list(Zdist = Zdist$Z, Ytilde = Ytilde, Ytilde_group = Zdist$Ytilde_group , umissing = Zdist$umissing, thinning = Zdist$thinning, BayesECMfit = object), class = "BayesECMpred")
+ predout <- structure(list(epz = epz$pz, Ytilde = Ytilde, Ytilde_group = epz$Ytilde_group , umissing = epz$umissing, thinning = epz$thinning, BayesECMfit = object), class = "BayesECMpred")
  return(predout)
 
 
@@ -702,7 +702,7 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
   UT_template <- upper.tri(diag(p), diag = TRUE)
   LT_template <- lower.tri(diag(p))
   dens_template <- rep(NA, times = Ntilde)
-  ldensmat <- matrix(NA, ncol = K, nrow = Ntilde)
+  densmat <- matrix(NA, ncol = K, nrow = Ntilde)
 
   dof <- unname(dof)
   Ytildemat <- unname(data.matrix(Ytilde))
@@ -732,24 +732,19 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
     }
   }
 
-  Z <- list()
   if(length(Kfull) != K){
 
     iters_use <- seq(from = 1, to = ncol(predmean[[Kmissing[1]]]), by = thinning)
-    Zmat <- matrix(NA, ncol = length(iters_use), nrow = K)
 
-    if(is.null(names(Y))){
-      rownames(Zmat) <- as.character(1:K)
-    }else{
-      rownames(Zmat) <- names(Y)
-    }
-
-    for(i in 1:Ntilde){
-      Z[[i]] <- Zmat
-    }
 
   }else{
     iters_use <- NA
+  }
+
+  if(is.null(names(Y))){
+    rownames(densmat) <- as.character(1:K)
+  }else{
+    rownames(densmat) <- names(Y)
   }
 
 
@@ -762,9 +757,6 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
   }
 
 
-
-  icount <- 1
-
   for(k in Kfull){
 
     Sighat[UT_template] <- SighatN[[k]]
@@ -775,7 +767,7 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     ## Need to code the scenario where there are different tpred for different K
 
-    ldensmat[,k] <- tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
+    densmat[,k] <- tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
                           Ytilde_group = Ytilde_group, dens_template = dens_template, dof = dof[k])
 
 
@@ -783,13 +775,11 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
 
   if(length(Kfull) == K){
-    pz <- pzfn(ldensmat = ldensmat, la_p = la_p)
 
-    for(j in 1:Ntilde){
-      Z[[j]] <- pz[j,]
-      names(Z[[j]]) <- names(Y)
-    }
 
+    ldensmat <- log(densmat)
+
+    pz <- pzfn(densmat = densmat, la_p = la_p)
 
 
   }else{
@@ -807,31 +797,31 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
       ## Need to code the scenario where there are different tpred for different K
 
-      ldensmat[,k] <- tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
+      densmat[,k] <- densmat[,k] + tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
                             Ytilde_group = Ytilde_group, dens_template = dens_template, dof = dof[k])
 
 
     }
 
 
+  }
 
+    densmat[,Kmissing] <- densmat[,Kmissing]/length(iters_use)
 
-    pz <- pzfn(ldensmat = ldensmat, la_p = la_p)
+    ldensmat <- log(densmat)
 
-    for(j in 1:Ntilde){
-      Z[[j]][,icount] <- pz[j,]
+    pz <- pzfn(ldensmat = densmat, la_p = la_p)
+
     }
 
-    icount <- icount + 1
 
-  }
-  }
 
-return(list(Z = Z, umissing = umissing, Ytilde_group = Ytilde_group, thinning = iters_use))
+return(list(pz = pz, umissing = umissing, Ytilde_group = Ytilde_group, thinning = iters_use))
 
 }
 
 unequal_weights <- function(ldensmat = NULL, la_p = NULL){
+
 
   lwdens <- sweep(ldensmat, MARGIN = 2, la_p, "+")
 
@@ -858,7 +848,7 @@ tpred_nomissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL,
                             umissing = NULL, Ytilde_group = NULL, dens_template = NULL, dof = NULL){
   #no elements of Ytilde are missing
 
-  dens_template <- mvnfast::dmvt(X = Ytilde, mu = muhat, sigma = Sighat, df = dof, log = TRUE)
+  dens_template <- mvnfast::dmvt(X = Ytilde, mu = muhat, sigma = Sighat, df = dof, log = FALSE)
 
   return(dens_template)
 
@@ -873,14 +863,16 @@ tpred_somemissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL,
 
 
   dens_template[Ytilde_group == 1] <- mvnfast::dmvt(X = Ytilde[(Ytilde_group == 1), , drop = FALSE],
-                                                   mu = muhat, sigma = Sighat, df =  dof, log = TRUE)
+                                                   mu = muhat, sigma = Sighat, df =  dof, log = FALSE)
 
 
   for(j in 2:length(umissing)){
 
 
     dens_template[Ytilde_group == j] <- mvnfast::dmvt(X = Ytilde[(Ytilde_group == j), -umissing[[j]] , drop = FALSE],
-                                                      mu = muhat[-umissing[[j]]], sigma = Sighat[-umissing[[j]], -umissing[[j]]], df =  dof, log = TRUE)
+                                                      mu = muhat[-umissing[[j]]],
+                                                      sigma = Sighat[-umissing[[j]], -umissing[[j]]],
+                                                      df =  dof, log = FALSE)
 
 
   }
@@ -893,7 +885,7 @@ tpred_allmissing1 <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = 
 
   dens_template <- mvnfast::dmvt(X = Ytilde[,-umissing[[1]] , drop = FALSE],
                                  mu = muhat[-umissing[[1]]], sigma = Sighat[-umissing[[1]], -umissing[[1]]],
-                                 df = dof, log = TRUE)
+                                 df = dof, log = FALSE)
 
   return(dens_template)
 
@@ -906,8 +898,9 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
   for(j in 1:length(umissing)){
 
     dens_template[Ytilde_group == j] <- mvnfast::dmvt(X =  Ytilde[(Ytilde_group == j), -umissing[[j]] , drop = FALSE],
-                                                      mu = muhat[-umissing[[j]]], sigma = Sighat[-umissing[[j]], -umissing[[j]]],
-                                                      df = dof, log = TRUE)
+                                                      mu = muhat[-umissing[[j]]],
+                                                      sigma = Sighat[-umissing[[j]], -umissing[[j]]],
+                                                      df = dof, log = FALSE)
 
   }
   return(dens_template)
@@ -957,19 +950,9 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
 #'
 summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2), ...){
 
-#sapply(X = object, function(X){apply(X, 1, function(X){coda::effectiveSize(X)})})
-
-  # Items to tabulate for summary
-  ## Expectation
-  ## Variance
-  ## Loss, and highlight minimum loss
-  ## Pvalueish criteria
-  ## Summary of meaning of arguments to function
-  ## MCMC diagnostics
-  ### Effective sample size
-  ### Geweke diagnostic
-
-  X <- object$Zdist[[index]]
+  ## gets the "category probability samples" for a particular ytilde
+  #X <- object$Zdist[[index]]
+  X <- object$epz[,index , drop = FALSE]
   cat_names <- rownames(X)
 
   if(is.numeric(category)){
@@ -988,13 +971,16 @@ summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2
     stop("Supplied argument 'category' must be an integer or character string which provides the index or names the category of interest.  Typically 'category' corresponds to the name used to specify detonations.")
   }
 
-  cat_samples <- X[category,]
-
+  ## Now the samples are for a particular category too
+  #cat_samples <- X[category,]
+  cat_samples <- X[category]
+## and the other categories
   else_samples <- X[-which(category == dimnames(X)[[1]]), ,drop = FALSE]
-
+## are grouped together
   else_samples <- colSums(else_samples)
-
+## Were going to replicate some of them?
   Xall <- rbind(X,else_samples)
+  ## And reorder them in a specific way to make sure everything is good
   reorder <- c(cat_index, nrow(Xall), (1:(nrow(Xall)-1))[-cat_index])
   Xall <- Xall[reorder,]
 
