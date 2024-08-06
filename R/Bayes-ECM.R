@@ -702,7 +702,7 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
   UT_template <- upper.tri(diag(p), diag = TRUE)
   LT_template <- lower.tri(diag(p))
   dens_template <- rep(NA, times = Ntilde)
-  densmat <- matrix(NA, ncol = K, nrow = Ntilde)
+  densmat <- matrix(0, ncol = K, nrow = Ntilde)
 
   dof <- unname(dof)
   Ytildemat <- unname(data.matrix(Ytilde))
@@ -742,9 +742,9 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
   }
 
   if(is.null(names(Y))){
-    rownames(densmat) <- as.character(1:K)
+    colnames(densmat) <- as.character(1:K)
   }else{
-    rownames(densmat) <- names(Y)
+    colnames(densmat) <- names(Y)
   }
 
 
@@ -779,7 +779,7 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     ldensmat <- log(densmat)
 
-    pz <- pzfn(densmat = densmat, la_p = la_p)
+    pz <- pzfn(ldensmat = ldensmat, la_p = la_p)
 
 
   }else{
@@ -810,7 +810,7 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     ldensmat <- log(densmat)
 
-    pz <- pzfn(ldensmat = densmat, la_p = la_p)
+    pz <- pzfn(ldensmat = ldensmat, la_p = la_p)
 
     }
 
@@ -1312,12 +1312,20 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
   ### 1) Find if there is a larger probability that the very importantant cateogory (vic) index, or the remaining indices
 
   if(nrow(C) == 2){
-  pAB <- do.call("rbind", sapply(bayes_pred$Zdist, function(X,v){
-    x <- rep(NA, times = 2)
-    x[1] <- X[which(names(X) == v)]
-    x[2] <- sum(X[which(names(X) != v)])
-    return(x)
-  }, v = vic, simplify = FALSE))
+    ## reduces the probabilities into two groups from K groups for binary detection
+  # pAB <- do.call("rbind", sapply(bayes_pred$epz, function(X,v){
+  #   x <- rep(NA, times = 2)
+  #   x[1] <- X[which(names(X) == v)]
+  #   x[2] <- sum(X[which(names(X) != v)])
+  #   return(x)
+  # }, v = vic, simplify = FALSE))
+
+  pAB <- apply(bayes_pred$epz, 1, function(X,v){
+      x <- rep(NA, times = 2)
+      x[1] <- X[which(names(X) == v)]
+      x[2] <- sum(X[which(names(X) != v)])
+      return(x)
+  }, v = vic, simplify = TRUE)
 
 
   Cdenom <- C[1,2] - C[2,2] + C[2,1] - C[1,1]
@@ -1331,10 +1339,13 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
   }
   }else{
 
-    Zdist_missing <- t(sapply(bayes_pred$Zdist, function(X){X}))
+    ## This takes the expectation of Z, for no missing data
+    Zdist_missing <- bayes_pred$epz #t(sapply(bayes_pred$epz, function(X){X}))
 
+    ## And computes expected loss
     Eloss <-  Zdist_missing %*% C
 
+    ## Finds minimum expected loss
     minEloss <- apply(Eloss, 1, which.min)
 
     vicindex <- which(names(Zdist_missing[1,]) == vic)
@@ -1536,12 +1547,14 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
 
   ## Steps
 
-  ### 1) Find if there is a larger probability that the very importantant cateogory (vic) index, or the remaining indices
+  ## Find the approximate expected probability of each category using the mean
 
 
-  Zdist_missing <- t(sapply(bayes_pred$Zdist, function(X){
-    apply(X,1,mean)
-  }))
+  # Zdist_missing <- t(sapply(bayes_pred$Zdist, function(X){
+  #   apply(X,1,mean)
+  # }))
+
+  Zdist_missing <-bayes_pred$epz
 
   if(nrow(C) == 2){
     pAB <- t(apply(Zdist_missing, 1, function(X, v){
