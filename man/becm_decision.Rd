@@ -15,7 +15,7 @@ becm_decision(
 )
 }
 \arguments{
-\item{bayes_pred}{An object of class \code{"BayesECMpred"} returned from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.  Data and order of data provided to \code{\link[=predict.BayesECM]{predict.BayesECM()}} much that of the \code{cat_truth} argument.}
+\item{bayes_pred}{An object of class \code{"BayesECMpred"} returned from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function.  Data and order of data provided to \code{\link[=predict.BayesECM]{predict.BayesECM()}} must match the order of the \code{cat_truth} argument.}
 
 \item{vic}{Character string, indicating the "Very Important Category" (\code{vic}) used for calculating categorization metrics.  The return of \code{becm_decision()} provides information on if new observations should be categorized into \code{vic} or the remainder of the training categories grouped together.}
 

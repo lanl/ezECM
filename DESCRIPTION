@@ -26,7 +26,6 @@ Imports:
     Rdpack,
     stats,
     utils,
-    HDInterval,
     mvnfast
 RdMacros: Rdpack
 VignetteBuilder: knitr

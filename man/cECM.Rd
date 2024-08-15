@@ -16,7 +16,7 @@ cECM(x, newdata = NULL, rda_params = NULL, transform = TRUE)
 \item{transform}{Logical indicating if the supplied p-values should be transformed by the function \eqn{2/\pi \times \mathrm{asin}\sqrt{X}}.  Ignored if a \code{list} is supplied as the argument \code{x}.}
 }
 \value{
-A list.  All possible returned objects contain a list element indicating the value of \code{transform} supplied to the \code{cECM} function call, as well as a \code{\link[klaR:rda]{klaR::rda()}} object related to relevant training data.  In addition if \code{newdata} argument is supplied, the returned list contains a \code{data.frame} specifying aggregate p-values for each new event (rows) for related event category (columns).
+A list.  Any returned objects contain a list element indicating the value of \code{transform} supplied to the \code{cECM} function call, as well as a \code{\link[klaR:rda]{klaR::rda()}} object related to relevant training data.  In addition if \code{newdata} argument is supplied, the returned list contains a \code{data.frame} specifying aggregate p-values for each new event (rows) for related event category (columns).
 }
 \description{
 Fits a regularized discriminant analysis model to labeled training data and generates an aggregate p-value for categorizing newly obtained data.

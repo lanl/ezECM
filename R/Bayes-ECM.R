@@ -13,18 +13,18 @@
 #' @param mixture_weights character string describing the weights of the distributions in the mixture to be used for prediction.  The default,`"training"` will utilize weights according to likelihood and prior specifications, while supplying the string `"equal"` will assume the marginal predictive distribution of each category is independent of the data and utilize equal weights.
 #' @param ... not used
 #'
-#' @return Returns a list of length `nrow(Ytilde)`.  Each list element is a matrix, with each row of the matrix corresponding to an event category.  Each column is a length \eqn{K} sample of \eqn{p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
+#' @return Returns a `list`.  The list element `epz` is a matrix with `nrow(Ytilde)` rows, corresponding to each event used for prediction, and `K` named columns.  Each column of `epz` is the expected category probability of the row stipulated event.  The remainder of the list elements hold data including `Ytilde`, information about additonal variables passed to `predict.BayesECM`, and data related to the previous [BayesECM()] fit.
 #' @export
 #'
 #' @details
 #'
 #' The data in `Ytilde` should be the p-values \eqn{\in (0,1]}.  The transformation applied to the data used to generate `object` is automatically applied to `Ytilde` within the `predict.BayesECM()` function.
 #'
-#' For a given event with an unknown category, a Bayesian ECM model seeks to predict the distribution of latent variable \eqn{\tilde{\mathbf{z}}_K}, where \eqn{\tilde{\mathbf{z}}_K} is a vector of the length \eqn{K}, and \eqn{K} is the number of event categories.  A single observation of \eqn{\tilde{\mathbf{z}}_K} is a draw from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution}.
+#' For a given event with an unknown category, a Bayesian ECM model seeks to predict the expected value of the latent variable \eqn{\tilde{\mathbf{z}}_K}, where \eqn{\tilde{\mathbf{z}}_K} is a vector of the length \eqn{K}, and \eqn{K} is the number of event categories.  A single observation of \eqn{\tilde{\mathbf{z}}_K} is a draw from a \href{https://en.wikipedia.org/wiki/Categorical_distribution}{Categorical Distribution}.
 #'
-#' The probabilities stipulated within the categorical distribution of \eqn{\tilde{\mathbf{z}}_K} are conditioned on any imputed missing data, prior hyperparameters, and individually each row of `Ytilde`. The output from [predict.BayesECM()] are draws from the distribution of \eqn{\mathbf{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{Psi}, \mathbf{\nu}, \mathbf{alpha}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}_{N \times p}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}.
+#' The expected probabilities stipulated within the categorical distribution of \eqn{\tilde{\mathbf{z}}_K} are conditioned on any imputed missing data, prior hyperparameters, and individually each row of `Ytilde`. The output from [predict.BayesECM()] are draws from the distribution of \eqn{\mathbf{E}[\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}^{+}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha}] = p(\tilde{\mathbf{z}}_K|\tilde{\mathbf{y}}_{\tilde{p}}, \mathbf{Y}^{+}, \mathbf{\eta}, \mathbf{\Psi}, \mathbf{\nu}, \mathbf{\alpha})}, where \eqn{\mathbf{Y}^{+}} represents the observed values within the training data.
 #'
-#' The argument `mixture_weights` controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\alpha})}, the predictive category probability marginalized over \eqn{\tilde{\mathbf{y}}_p}.  Using `"training"` is best when the ratio of category observations is similar for the training data and the new observations `Ytilde`.  If the ratios of category observations are drastically different, it may be beneficial to use `"equal"`, which sets \eqn{p(\tilde{\mathbf{z}}_K) = (1/K) \mathbf{1}^{\top}_K}.
+#' The argument `mixture_weights` controls the value of \eqn{p(\tilde{\mathbf{z}}_K|\mathbf{Y}_{N \times p}, \mathbf{\alpha})}, the probability of each \eqn{\tilde{z}_k = 1}, before \eqn{\tilde{\mathbf{y}}_{\tilde{p}}} is observed.  The standard result is obtained from the prior hyperparameter values in \eqn{\mathbf{\alpha}} and the number of unique events in each \eqn{\mathbf{Y}_{N_k \times p}}.  Setting `mixture_weights = "training"` will utilize this standard result in prediction.  If the frequency of the number events used for each category in training is thought to be problematic, providing the argument `mixture_weights = "equal"` sets \eqn{p(\tilde{z}_1 = 1|\mathbf{Y}_{N \times p}) =  \dots = p(\tilde{z}_K = 1|\mathbf{Y}_{N \times p}) = 1/K}.  If the user wants to use a set of \eqn{p(\tilde{z}_k = 1|\mathbf{Y}_{N \times p})} which are not equal but also not informed by the data, we suggest setting the elements of the hyperparameter vector \eqn{\mathbf{\alpha}} equal to values with a large magnitude and in the desired ratios for each category.  However, this can cause undesirable results in prediction if the magnitude of some elements of \eqn{\mathbf{\alpha}} are orders larger than others.
 #'
 #' To save computation time, the user can specify an integer value for `thinning` greater than one.  Every `thinning`th Markov-chain Monte-Carlo sample is used for prediction.  This lets the user take a large number of samples during the training step, allowing for better mixing.  See details in a package vignette by running \code{vignette("syn-data-code", package = "ezECM")}
 #'
@@ -40,7 +40,7 @@
 #' file_path <- system.file("extdata", csv_use, package = "ezECM")
 #' new_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
 #'
-#' Zsamples <- predict(trained_model,  Ytilde = new_data)
+#' bayes_pred <- predict(trained_model,  Ytilde = new_data)
 #'
 #'
 #' @method predict BayesECM
@@ -89,7 +89,7 @@ predict.BayesECM <- function(object, Ytilde, thinning = 1, mixture_weights = "tr
 #'
 #' @details
 #'
-#' The output of `BayesECM()` provides a trained Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in `Y`, these values are imputed.  A trained `BayesECM` model is then used with the [predict.BayesECM()] function to categorize new observations.
+#' The output of `BayesECM()` provides a trained Bayesian Event Categorization Matrix (B-ECM) model, utilizing the data and prior parameter settings .  If there are missing values in `Y`, these values are imputed.  A trained `BayesECM` model is then used with the [predict.BayesECM()] function to calculate expected category probabilities.
 #'
 #' ##  Data Preparation
 #'
@@ -918,18 +918,18 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
 #' @param C square matrix of dimension 2, providing loss values to be used in hypothesis testing.  See Details.
 #' @param ... not used
 #'
-#' @return Prints a summary including probability of each category for the stipulated event `index`, and minimum expected loss for binary categorization.
+#' @return Prints a summary including probability of each category for the event stipulated by `index`, minimum expected loss for binary categorization, and probability of a-typicality of the event for the category specified by `category`.
 #' @export
 #'
 #' @details
 #'
 #' ## Expected Loss
 #'
-#' [summary.BayesECMpred()] calculates expected loss for the binary hypothesis stipulated by `category`.  Expected loss is calculated using the loss matrix specified with argument `C`.  The default values for `C` result in 0-1 loss being used.  Format details for the loss matrix can be found in `vignette("BayesECM")`.
+#' [summary.BayesECMpred()] prints expected loss for the binary hypothesis stipulated by `category`.  Expected loss is calculated using the loss matrix specified with argument `C`.  The default values for `C` result in 0-1 loss being used.  Format details for the loss matrix can be found in `vignette("syn-data-code")`.
 #'
 #' ## Typicality
 #'
-#' Typicality indices are used in [cECM_decision()] as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  `summary.BayesECMpred` prints the expected typicality related to the training data as a whole.  Note that expected typicality is different than what is recommended, and likely this feature will be depreciated after further development.  The expectation is taken over the full mixture of predictive distributions.  When `summary.BayesECMpred` is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
+#' Typicality indices are used in [cECM_decision()] as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Probability of the p-value being less than a significance level of 0.05 is reported.  If no missing data is used for training, this probability is either 0 or 1.
 #'
 #' @examples
 #'
@@ -943,7 +943,7 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
 #' file_path <- system.file("extdata", csv_use, package = "ezECM")
 #' new_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
 #'
-#' Zsamples <- predict(trained_model,  Ytilde = new_data)
+#' bayespred <- predict(trained_model,  Ytilde = new_data)
 #'
 #'
 #' @method summary BayesECMpred
@@ -952,8 +952,8 @@ summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2
 
   ## gets the "category probability samples" for a particular ytilde
   #X <- object$Zdist[[index]]
-  X <- object$epz[,index , drop = FALSE]
-  cat_names <- rownames(X)
+  X <- as.data.frame(object$epz[index , , drop = FALSE])
+  cat_names <- colnames(X)
 
   if(is.numeric(category)){
     if(category > length(cat_names)){
@@ -975,42 +975,36 @@ summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2
   #cat_samples <- X[category,]
   cat_samples <- X[category]
 ## and the other categories
-  else_samples <- X[-which(category == dimnames(X)[[1]]), ,drop = FALSE]
+  else_samples <- X[,-which(category == dimnames(X)[[2]]) ,drop = FALSE]
 ## are grouped together
-  else_samples <- colSums(else_samples)
+  else_samples <- rowSums(else_samples)
 ## Were going to replicate some of them?
-  Xall <- rbind(X,else_samples)
+  Xall <- cbind(X,else_samples)
   ## And reorder them in a specific way to make sure everything is good
-  reorder <- c(cat_index, nrow(Xall), (1:(nrow(Xall)-1))[-cat_index])
-  Xall <- Xall[reorder,]
+  reorder <- c(cat_index, ncol(Xall), (1:(ncol(Xall)-1))[-cat_index])
+  Xall <- Xall[,reorder]
 
   # First data.frame
 
-  stat.sum <- data.frame(matrix(NA, ncol = 3, nrow = nrow(Xall)))
-  names(stat.sum) <- c("E", "LB", "UB")
+  stat.sum <- data.frame(matrix(NA, ncol = 1, nrow = ncol(Xall)))
+  names(stat.sum) <- c("E")
 
   # Expectation
 
-  stat.sum$E <- apply(Xall, 1, mean)
+  stat.sum$E <- unlist(unname(Xall))
 
-  # HDI
+  rownames(stat.sum) <- c(category, paste0("Not ", category), colnames(X)[-cat_index])
+  stat.sum$E <- round(stat.sum$E, digits = 3)
+  ellps <- data.frame(E = rep(".....", times = 1))
+  rownames(ellps) <- "...Itemized Categories..."
+  stat.sum <- rbind(stat.sum[1:2, , drop = FALSE], ellps , stat.sum[3:nrow(stat.sum), , drop = FALSE])
 
-  crit_I <- t(apply(Xall,1,HDInterval::hdi))
-
-  stat.sum$LB <- crit_I[,1]
-  stat.sum$UB <- crit_I[,2]
-
-  stat.sum <- as.data.frame(sapply(stat.sum, round, digits = 2))
-
-  rownames(stat.sum) <- c(category, paste0("Not ", category), rownames(X)[-cat_index])
-  stat.sum <- rbind(stat.sum[1:2,], rep(".....", times = 3), stat.sum[3:nrow(stat.sum),])
-  rownames(stat.sum)[3] <- "...Itemized Categories..."
 
   # Print stat.sum data.frame
 
   cat("\n\n")
   cat("Summary Statistics")
-  print(knitr::kable(stat.sum, format = "rst", digits = 2, row.names = TRUE, col.names = c("Expected Probability of Category", "95% Interval LB", "95% Interval UB")))
+  print(knitr::kable(stat.sum, format = "rst", digits = 2, row.names = TRUE, col.names = c("Expected Probability of Category")))
 
   # New data.frame
 
@@ -1044,66 +1038,111 @@ cat(paste0("Decision Criterion: select ", category, " if E[p(", category, ")] ",
 
   ## typicality index
 
+  Kfull <- object$BayesECMfit$data$Kfull
+  K <- length(object$BayesECMfit$Y)
 
-  K <- nrow(X)
-  samples <- ncol(X)
-  ytilde <- object$Ytilde[index,]
-  pvals <- matrix(NA, ncol = samples, nrow = K)
+  if(length(Kfull) == 0){
+    Kmissing <- 1:K
+    iters <- ncol(object$BayesECMfit$MCMC$Ybar[[Kmissing[1]]])
+  }else if(all(Kfull %in% (1:K))){
+    Kmissing <- integer(0)
+    iters <- NA
+  }else{
+    Kmissing <- (1:K)[which(!((1:K) %in% Kfull))]
+    iters <- ncol(object$BayesECMfit$MCMC$Ybar[[Kmissing[1]]])
+  }
+
+  thinning <- object$thinning
+
+  Ytilde <- unlist(unname(object$Ytilde[index,]))
+  Ytilde_missing <- which(is.na(Ytilde))
+  Ytilde <- Ytilde[-Ytilde_missing]
+  ptilde <- length(Ytilde)
+  pvals <- matrix(NA, ncol = K, nrow = 1)
+
   N <- sapply(object$BayesECMfit$Y, nrow)
   nu <- sapply(object$BayesECMfit$priors, function(X){
     X$nu
   })
   p <- ncol(object$BayesECMfit$Y[[1]])
+  Sighat <- matrix(NA, ncol = p, nrow = p)
   UT_template <- upper.tri(diag(p), diag = TRUE)
   LT_template <- lower.tri(diag(p))
   Sighat <- matrix(NA, ncol = p, nrow = p)
   dof <- N + nu - p + 1
-  ptilde <- p - sum(is.na(ytilde))
-  ytilde_present <- which(!is.na(ytilde))
-  dof_ptilde <- dof/ptilde
-  ytilde <- unlist(ytilde[ytilde_present])
 
-  for(i in 1:K){
-    for(j in 1:samples){
-      Sighat[UT_template] <- object$BayesECMfit$MCMC$SighatN[[i]][,j]
+  typicality_probs <- rep(NA, times = K)
+  alphatilde <- 0.05
+
+  if(length(Kfull) != 0){
+
+    for(k in Kfull){
+
+      Sighat[UT_template] <- object$BayesECMfit$MCMC$SighatN[[k]]
       Sighat[LT_template] <- t(Sighat)[LT_template]
 
-      sighatm <- Sighat[ytilde_present, ytilde_present]
+      muhat <- object$BayesECMfit$MCMC$predmean[[k]]
 
-      muhat <- object$BayesECMfit$MCMC$predmean[[i]][ytilde_present, j]
+      if(ptilde == p){
+        muuse <- muhat
+        Siguse <- Sighat
+      }else{
+        muuse <- muhat[-Ytilde_missing, drop = FALSE]
+        Siguse <- Sighat[-Ytilde_missing,-Ytilde_missing, drop = FALSE]
+      }
 
-      x <- (muhat - ytilde)
-      pvals[i,j] <- t(x) %*% solve(sighatm, x)
+      y <- Ytilde - muuse
+      Siy <- solve(Siguse,y)
+      tySiy <- t(y) %*% Siy
+
+      pval <- stats::pf(tySiy*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
+
+      typicality_probs[k] <- as.numeric(pval < alphatilde)
+
+
     }
+
   }
 
-  pvals <- pvals * dof_ptilde
-  for(i in 1:K){
-    pvals[i,] <- pf(pvals[i,], df1 = ptilde, df2 = dof[i], log.p = FALSE, lower.tail = FALSE)
+
+  if(length(Kmissing) != 0){
+
+    for(k in Kmissing){
+      pval_samples <- rep(NA, times = iters)
+      for(i in thinning){
+
+        Sighat[UT_template] <- object$BayesECMfit$MCMC$SighatN[[k]][,i]
+        Sighat[LT_template] <- t(Sighat)[LT_template]
+
+        muhat <- object$BayesECMfit$MCMC$predmean[[k]][,i]
+
+        if(ptilde == p){
+          muuse <- muhat
+          Siguse <- Sighat
+        }else{
+          muuse <- muhat[-Ytilde_missing, drop = FALSE]
+          Siguse <- Sighat[-Ytilde_missing,-Ytilde_missing, drop = FALSE]
+        }
+
+        y <- Ytilde - muuse
+        Siy <- solve(Siguse,y)
+        tySiy <- t(y) %*% Siy
+
+        pval <- stats::pf(tySiy*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
+
+        pval_samples[i] <- pval < alphatilde
+
+      }
+
+
+      typicality_probs[k] <- mean(pval_samples, na.rm = TRUE)
+
+    }
+
   }
 
-  Epval <- apply(pvals, 1, mean)
-
   cat("\n\n")
-  cat(paste0("Expected typicality index of ", category, " is ", round(Epval[cat_index], digits = 3)))
-
-  alpha <- sapply(object$BayesECMfit$priors, function(X){
-    X$alpha
-  })
-  atilde <- alpha + N
-  pztilde <- atilde/sum(atilde)
-  YEpval <- sum(Epval*pztilde)
-
-  cat("\n\n")
-  cat(paste0("Typicality relative to the training data is ", round(YEpval, digits = 3)))
-
-  #### If an output is assigned
-
-  stat.sum <- stat.sum[-3,]
-  stat.sum_out <- apply(stat.sum, 2, as.numeric)
-  rownames(stat.sum_out) <- rownames(stat.sum)
-
-  invisible(list(stat.sum = stat.sum_out, typicality = list(pvals = Epval, H0s = rownames(X))))
+  cat(paste0("Probaility of a-typicality of category ", category, " is ", round(typicality_probs[cat_index], digits = 3), " for a significance level of 0.05"))
 
  }
 
@@ -1112,7 +1151,7 @@ cat(paste0("Decision Criterion: select ", category, " if E[p(", category, ")] ",
 #'
 #' Outputs batch performance metrics of decisions using the output of [predict.BayesECM()] when the true category of testing events are known.  Can be used for empirically comparing different model fits.
 #'
-#' @param bayes_pred An object of class `"BayesECMpred"` returned from the [predict.BayesECM()] function.  Data and order of data provided to [predict.BayesECM()] much that of the `cat_truth` argument.
+#' @param bayes_pred An object of class `"BayesECMpred"` returned from the [predict.BayesECM()] function.  Data and order of data provided to [predict.BayesECM()] must match the order of the `cat_truth` argument.
 #' @param vic Character string, indicating the "Very Important Category" (`vic`) used for calculating categorization metrics.  The return of `becm_decision()` provides information on if new observations should be categorized into `vic` or the remainder of the training categories grouped together.
 #' @param cat_truth Vector of the same length as `nrow(bayes_pred$Ytilde)`, where `Ytilde` was previously supplied to the [predict.BayesECM()] function.  Used for accuracy calculations of a `BayesECM` fit and decision criteria when the true category of the new observations are known.
 #' @param alphatilde Numeric scalar between 0 and 1 used for the significance level of typicality indices.
@@ -1168,7 +1207,7 @@ becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alpha
   }
 
 
-  if(is.vector(bayes_pred$Zdist[[1]])){
+  if(length(bayes_pred$BayesECMfit$data$Kfull) == length(bayes_pred$BayesECMfit$Y)){
     out <- becm_decision_fulltraining(bayes_pred = bayes_pred, alphatilde = alphatilde, vic = vic, cat_truth = cat_truth, pn = pn, C = C, rej = rej)
   }else{
 
@@ -1288,7 +1327,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
             return(tySiy/ptil)
           }, S = Sighat, ptil = ptilde, m = muhat)
 
-          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
         }else{
           ind <- which(bayes_pred$Ytilde_group == i)
@@ -1306,10 +1345,10 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
             return(tySiy/ptil)
           }, S = Siguse, ptil = ptilde, m = muuse)
 
-          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
         }
       }
-      rej[,k] <- pvals <= alphatilde
+      rej[,k] <- pvals < alphatilde
     }
   }else{
     if(length(bayes_pred$umissing[[1]]) == 0){
@@ -1330,17 +1369,17 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
         }, S = Sighat, ptilde = p, m = muhat)
 
 
-        pvals <- stats::pf(pvals*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+        pvals <- stats::pf(pvals*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
 
-        rej[,k] <- pvals <= alphatilde
+        rej[,k] <- pvals < alphatilde
 
       }
 
 
     }else{
       ## Need to code up what to do if all ytilde are missing the same discriminant
-      stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer@lanl.gov) if you are recieving this error for your application.")
+      stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer <at> lanl.gov) if you are recieving this error for your application.")
     }
   }
     ### End if statement related to is.null(rej)
@@ -1349,7 +1388,8 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
 
   for(i in 1:length(pcat)){
     if(pcat[i] == "a"){
-      if(rej[i,which(names(bayes_pred$Zdist[[1]]) == vic)]){
+      #if(rej[i,which(names(bayes_pred$Zdist[[1]]) == vic)]){
+      if(rej[i,which(colnames(bayes_pred$epz) == vic)]){
         pcat[i] <- "b"
         if(nrow(C) > 2){
           minEloss_char[i] <- "outlier"
@@ -1521,7 +1561,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
           }, S = Sighat, ptil = ptilde, m = muhat)
 
           # Is df1 p or ptilde??...pretty sure ptilde
-          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+          pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
         }else{
           ind <- which(bayes_pred$Ytilde_group == j)
@@ -1539,10 +1579,10 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
             return(tySiy/ptil)
           }, S = Siguse, ptil = ptilde, m = muuse)
 
-          pvals[ind] <-stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+          pvals[ind] <-stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
         }
       }
-      rej[,k] <- pvals <= alphatilde
+      rej[,k] <- pvals < alphatilde
     }
     for(k in Kmissing){
 
@@ -1570,7 +1610,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
               return(tySiy/ptil)
             }, S = Sighat, ptil = ptilde, m = muhat)
 
-            pvals[ind,i] <- stats::pf(pvals[ind,i]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+            pvals[ind,i] <- stats::pf(pvals[ind,i]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
           }else{
             ind <- which(bayes_pred$Ytilde_group == j)
@@ -1588,7 +1628,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
               return(tySiy/ptil)
             }, S = Siguse, ptil = ptilde, m = muuse)
 
-            pvals[ind,i] <- stats::pf(pvals[ind,i]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = TRUE)
+            pvals[ind,i] <- stats::pf(pvals[ind,i]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
           }
         }
       }

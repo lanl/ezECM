@@ -9,7 +9,7 @@
 #' @param rda_params a `list` of arguments passed to the [klaR::rda()] function.  If arguments `rda_params$x` or `rda_params$grouping` are supplied, they are ignored.
 #' @param transform Logical indicating if the supplied p-values should be transformed by the function \eqn{2/\pi \times \mathrm{asin}\sqrt{X}}.  Ignored if a `list` is supplied as the argument `x`.
 #'
-#' @return A list.  All possible returned objects contain a list element indicating the value of `transform` supplied to the `cECM` function call, as well as a [klaR::rda()] object related to relevant training data.  In addition if `newdata` argument is supplied, the returned list contains a `data.frame` specifying aggregate p-values for each new event (rows) for related event category (columns).
+#' @return A list.  Any returned objects contain a list element indicating the value of `transform` supplied to the `cECM` function call, as well as a [klaR::rda()] object related to relevant training data.  In addition if `newdata` argument is supplied, the returned list contains a `data.frame` specifying aggregate p-values for each new event (rows) for related event category (columns).
 #'
 #' @export
 #'

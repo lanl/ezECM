@@ -7,7 +7,6 @@
 pval_gen(
   sims = 100,
   grid.dim = c(800, 800, 30),
-  transform = FALSE,
   seismometer = list(N = 100, max.depth = 2, Sig = NULL, sig.draws = c(15, 2)),
   explosion = list(max.depth = 5, prob = 0.4),
   pwave.arrival = list(H0 = 5, V = 5.9, optim.starts = 15),
@@ -18,8 +17,6 @@ pval_gen(
 \item{sims}{numeric stipulating the number of individual events to generate.}
 
 \item{grid.dim}{numeric 3-vector providing the extent of the coordinate system in \code{c(X,Y,Z)} to be used in km.}
-
-\item{transform}{logical indicating if the simulated p-values should be transformed by the function \code{(2/pi)*asin(sqrt(X))}.  Typically the default (\code{FALSE}) value should be use and transformation should be done using the \code{transform} argument of \link{cECM}.}
 
 \item{seismometer}{list stipulating variables relating to the seismometers. Providing an incomplete list reverts to the default values.  List elements are:
 \itemize{

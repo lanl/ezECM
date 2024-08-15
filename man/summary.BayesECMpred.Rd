@@ -18,7 +18,7 @@
 \item{...}{not used}
 }
 \value{
-Prints a summary including probability of each category for the stipulated event \code{index}, and minimum expected loss for binary categorization.
+Prints a summary including probability of each category for the event stipulated by \code{index}, minimum expected loss for binary categorization, and probability of a-typicality of the event for the category specified by \code{category}.
 }
 \description{
 Tabulates results from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} function for quick analysis.
@@ -26,12 +26,12 @@ Tabulates results from the \code{\link[=predict.BayesECM]{predict.BayesECM()}} f
 \details{
 \subsection{Expected Loss}{
 
-\code{\link[=summary.BayesECMpred]{summary.BayesECMpred()}} calculates expected loss for the binary hypothesis stipulated by \code{category}.  Expected loss is calculated using the loss matrix specified with argument \code{C}.  The default values for \code{C} result in 0-1 loss being used.  Format details for the loss matrix can be found in \code{vignette("BayesECM")}.
+\code{\link[=summary.BayesECMpred]{summary.BayesECMpred()}} prints expected loss for the binary hypothesis stipulated by \code{category}.  Expected loss is calculated using the loss matrix specified with argument \code{C}.  The default values for \code{C} result in 0-1 loss being used.  Format details for the loss matrix can be found in \code{vignette("syn-data-code")}.
 }
 
 \subsection{Typicality}{
 
-Typicality indices are used in \code{\link[=cECM_decision]{cECM_decision()}} as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Expected typicality indices are reported.  \code{summary.BayesECMpred} prints the expected typicality related to the training data as a whole.  Note that expected typicality is different than what is recommended, and likely this feature will be depreciated after further development.  The expectation is taken over the full mixture of predictive distributions.  When \code{summary.BayesECMpred} is saved as a variable, the expected typicality index can be viewed for each category, without the mixture weights.
+Typicality indices are used in \code{\link[=cECM_decision]{cECM_decision()}} as part of the decision criteria.  Here, we have adapted typicality indices for use with a Bayesian ECM model for outlier detection, when a new observation may not be related to the categories used for training.  Probability of the p-value being less than a significance level of 0.05 is reported.  If no missing data is used for training, this probability is either 0 or 1.
 }
 }
 \examples{
@@ -46,7 +46,7 @@ csv_use <- "good_newdata.csv"
 file_path <- system.file("extdata", csv_use, package = "ezECM")
 new_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
 
-Zsamples <- predict(trained_model,  Ytilde = new_data)
+bayespred <- predict(trained_model,  Ytilde = new_data)
 
 
 }
