@@ -347,7 +347,7 @@ prior_allocation <- function(priors = NULL, Y = NULL, transform = NULL){
     }
 
     if("alpha" %in% default_prior_names){
-      alpha_temp <- K/2
+      alpha_temp <- 1/2
     }else{
       alpha_temp <- priors$alpha
     }
