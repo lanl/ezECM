@@ -13,6 +13,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/lanl/ezECM/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lanl/ezECM/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
 # ezECM
 
 Install `ezECM` from RStudio using `remotes::install_github("lanl/ezECM")`.  Package is currently finishing development and testing before submission to CRAN
