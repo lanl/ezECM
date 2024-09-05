@@ -47,6 +47,14 @@
 #'
 predict.BayesECM <- function(object, Ytilde, thinning = 1, mixture_weights = "training", ...){
 
+  ### Some notes on the changes that need to be made if one or more entire discriminants are missing from a category for training
+  #### In imputation how is this accounted for?  Do we still need to impute this missing discriminant?
+  #### For the predictive distribution, how is this accounted for?  Do we still need to impute the missing discriminant
+  #### How does the degrees of freedom change for these densities?
+  #### Change the prior degrees of freedom if an entire disciminant is missing.
+  #### It can be shown that marginalizing over an entire discriminant within the predictive distribuiton is equivalent to marginalizing over that discriminant within the joint distribution of that discriminant and the predictive value
+
+
 
   Ytilde$event <- NULL
   if(!all(names(Ytilde) %in% names(object$Y[[1]]))){
@@ -814,7 +822,8 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     }
 
-
+  pz <- as.data.frame(pz)
+names(pz) <- names(BayesECM_obj$Y)
 
 return(list(pz = pz, umissing = umissing, Ytilde_group = Ytilde_group, thinning = iters_use))
 
@@ -1255,12 +1264,12 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
   #   return(x)
   # }, v = vic, simplify = FALSE))
 
-  pAB <- apply(bayes_pred$epz, 1, function(X,v){
+  pAB <- t(apply(bayes_pred$epz, 1, function(X,v){
       x <- rep(NA, times = 2)
       x[1] <- X[which(names(X) == v)]
       x[2] <- sum(X[which(names(X) != v)])
       return(x)
-  }, v = vic, simplify = TRUE)
+  }, v = vic, simplify = TRUE))
 
 
   Cdenom <- C[1,2] - C[2,2] + C[2,1] - C[1,1]
@@ -1278,7 +1287,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
     Zdist_missing <- bayes_pred$epz #t(sapply(bayes_pred$epz, function(X){X}))
 
     ## And computes expected loss
-    Eloss <-  Zdist_missing %*% C
+    Eloss <-  as.matrix(Zdist_missing) %*% C
 
     ## Finds minimum expected loss
     minEloss <- apply(Eloss, 1, which.min)
@@ -1379,7 +1388,34 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
 
     }else{
       ## Need to code up what to do if all ytilde are missing the same discriminant
-      stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer <at> lanl.gov) if you are recieving this error for your application.")
+
+      ## Logic to get to this point:
+      ### If the training data does not have any missing elements{
+      #### If all ytilde are missing the same discriminant{
+      ##### If there is no ytilde that is fully observed{
+      ###### HERE WE ARE
+      #####}
+      ####}
+     ###}
+
+      ptilde <- p - length(bayes_pred$umissing[[1]])
+
+      muuse <- muhat[-bayes_pred$umissing[[1]], drop = FALSE]
+      Siguse <- Sighat[-bayes_pred$umissing[[1]], -bayes_pred$umissing[[1]], drop = FALSE]
+
+      pvals[1] <- apply(Ytilde[ind,-bayes_pred$umissing[[1]], drop = FALSE], 1, function(X,S, ptil, m){
+        y <- (X - m)
+        Siy <- solve(S,y)
+        tySiy <- t(y) %*% Siy
+        #tySiy <- (tySiy + t(tySiy))/2
+        return(tySiy/ptil)
+      }, S = Siguse, ptil = ptilde, m = muuse)
+
+      pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
+
+
+      rej[,k] <- pvals < alphatilde
+      #stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer <at> lanl.gov) if you are recieving this error for your application.")
     }
   }
     ### End if statement related to is.null(rej)
@@ -1511,7 +1547,7 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
     }
   }else{
 
-    Eloss <- Zdist_missing %*% C
+    Eloss <- as.matrix(Zdist_missing) %*% C
     minEloss <- apply(Eloss, 1, which.min)
 
     vicindex <- which(names(Zdist_missing[1,]) == vic)
