@@ -1,4 +1,3 @@
-# ezECM (development version)
+# ezECM 1.0.0
 
 * Initial CRAN submission.
-
