@@ -29,3 +29,5 @@ Imports:
     mvnfast
 RdMacros: Rdpack
 VignetteBuilder: knitr
+URL: https://github.com/lanl/ezECM
+BugReports: https://github.com/lanl/ezECM/issues
