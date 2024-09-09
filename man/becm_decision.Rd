@@ -40,3 +40,21 @@ The matrix \code{C} specifies the loss for a set of categorization actions for a
 
 The dimension of matrix \code{C} specifies the categorization type.  A dimension of 2 is binary categorization, with the first column and row always corresponding to the category chosen as the \code{vic} argument.  Otherwise, when the dimension of \code{C} is equal to the number of categories, the indices of the rows and columns of \code{C} are in the same order as the categories listed for \code{names(bayes_pred$BayesECMfit$Y)}.
 }
+\examples{
+
+csv_use <- "good_training.csv"
+file_path <- system.file("extdata", csv_use, package = "ezECM")
+training_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
+
+trained_model <- BayesECM(Y = training_data, BT = c(10,1000))
+
+csv_use <- "good_newdata.csv"
+file_path <- system.file("extdata", csv_use, package = "ezECM")
+new_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
+
+bayespred <- predict(trained_model,  Ytilde = new_data)
+
+accuracy <- becm_decision(bayes_pred = bayespred, vic = "explosion", cat_truth = new_data$event)
+
+
+}

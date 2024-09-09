@@ -47,14 +47,6 @@
 #'
 predict.BayesECM <- function(object, Ytilde, thinning = 1, mixture_weights = "training", ...){
 
-  ### Some notes on the changes that need to be made if one or more entire discriminants are missing from a category for training
-  #### In imputation how is this accounted for?  Do we still need to impute this missing discriminant?
-  #### For the predictive distribution, how is this accounted for?  Do we still need to impute the missing discriminant
-  #### How does the degrees of freedom change for these densities?
-  #### Change the prior degrees of freedom if an entire disciminant is missing.
-  #### It can be shown that marginalizing over an entire discriminant within the predictive distribuiton is equivalent to marginalizing over that discriminant within the joint distribution of that discriminant and the predictive value
-
-
 
   Ytilde$event <- NULL
   if(!all(names(Ytilde) %in% names(object$Y[[1]]))){
@@ -311,9 +303,6 @@ prior_allocation <- function(priors = NULL, Y = NULL, transform = NULL){
   eps <- sqrt(.Machine$double.eps)
   discrim_names <- names(Y[[1]])
 
-  ## Somewhere do a check on the "priors" argument
-  ### Check if length(which(priors == "default")) == length(which(unlist(priors) == "default"))
-
   if(any(priors == "default")){
     ## Sets default values to parameters specified as default
     if(priors == "default"){
@@ -394,18 +383,7 @@ prior_allocation <- function(priors = NULL, Y = NULL, transform = NULL){
 BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats = NULL){
 
 
-
-  ## The BayesECM version with the mean and cov integrated out.
   ## Returns imputed data, some data structures that help with prediction, priors used
-
-  ## Inputs
-  ### Y - list of observations with each list element being a unique event category.  Missing data indicated with NA
-  ### Priors - list, mean is specified by a list of vectors and covariances specified by list of matrices, degrees of freedom specified by vector?
-  ### BT - MCMC parameters
-  ### verb - should progress be printed
-  ### cats - vector of named event categories
-
-
 
   # General Data
   N <- unname(sapply(Y, nrow))
@@ -414,20 +392,9 @@ BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats
   pvec <- 1:p
   Ip <- diag(p)
   Yimpute <- list()
-  ## below varibale?
+
   Ydrawn <- Y
   NSighat <- (N + 2)/(N + 1)
-
-  ## Temporary variables:
-
-  # priors <- list()
-  #
-  # for(i in 1:length(Y)){
-  #   priors[[i]] <- list(nu = sample(10:50, size = 1), eta = runif(p, min = -50, max = 50), alpha = runif(1)*2)#, Psi = matrix(runif(p^2)*3, ncol = p, nrow = p))
-  #   x <- MASS::mvrnorm(1, mu = priors[[i]]$eta, Sigma = diag(p)*runif(1, min = 1, max = 6))
-  #   priors[[i]]$Psi <- solve(tcrossprod(x - priors[[i]]$eta)+ diag(p)*sqrt(.Machine$double.eps))
-  #   priors[[i]]$Psi <- (priors[[i]]$Psi + t(priors[[i]]$Psi))/2
-  # }
 
   # Save for each event type which columns have missing data, the number of missing data, and the index of missing data
 
@@ -447,7 +414,7 @@ BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats
     Psi22iPsi21[[k]] <- list()
     Psi11cond[[k]] <- rep(NA, times = p)
     Y_minus_index[[k]] <- apply(Y[[k]], 2, function(X){which(is.na(X))})
-    N_minus[[k]] <- apply(Y[[k]],2, function(X){sum(is.na(X))})  #sapply(Y_minus_index[[k]], function(X){length(X)})
+    N_minus[[k]] <- apply(Y[[k]],2, function(X){sum(is.na(X))})
     N_plus[[k]] <- N[k] - N_minus[[k]]
     IpJ[[k]] <- diag(N[k]) + matrix(1, ncol = N[k], nrow = N[k])
     Yimpute[[k]] <- list()
@@ -456,13 +423,7 @@ BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats
     predmean[[k]] <- matrix(NA, ncol = BT[2], nrow = p)
     I_one_N_J[[k]] <- diag(N[k]) - (1/(N[k]+ 1))*matrix(1, ncol = N[k], nrow = N[k])
     p_part_draws[[k]] <- which(!(N_plus[[k]] %in% c(0,N[k])))
-    # if(anyN[k] %in% N_plus[[k]]){
-    #   p_part_draws[[k]] <- (1:p)[-which(N_plus[[k]] %in% c(0,N[k]))]
-    # }else if(){
-    #
-    # }else{
-    #   p_part_draws[[k]] <- 1:p
-    # }
+
     if(0 %in% N_plus[[k]]){
       p_full_draws[[k]] <- (1:p)[N_plus[[k]] == 0]
     }else{
@@ -509,7 +470,6 @@ BayesECM_train <- function(Y = NULL, BT = NULL, priors = NULL, verb = NULL, cats
 
 
         y2 <- Ydrawn[[k]][-Y_minus_index[[k]][[j]], j, drop = FALSE]
-        # Case where data for y1 is full?
         y3 <- Ydrawn[[k]][Y_minus_index[[k]][[j]], -j, drop = FALSE]
         y4 <- Ydrawn[[k]][-Y_minus_index[[k]][[j]], -j, drop = FALSE]
 
@@ -773,8 +733,6 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     muhat <- predmean[[k]]
 
-    ## Need to code the scenario where there are different tpred for different K
-
     densmat[,k] <- tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
                           Ytilde_group = Ytilde_group, dens_template = dens_template, dof = dof[k])
 
@@ -796,14 +754,11 @@ BayesECM_pred <- function(BayesECM_obj = NULL, Ytilde = NULL, verb = NULL,
 
     for(k in Kmissing){
 
-      ## Note, this Sighat is not rescaled by the degrees of freedom
       Sighat[UT_template] <- SighatN[[k]][,i]
       Sighat[LT_template] <- t(Sighat)[LT_template]
       Sighat <- Sighat/dof[k]
 
       muhat <- predmean[[k]][,i]
-
-      ## Need to code the scenario where there are different tpred for different K
 
       densmat[,k] <- densmat[,k] + tpred(Ytilde = Ytildemat, muhat = muhat, Sighat = Sighat, umissing = umissing,
                             Ytilde_group = Ytilde_group, dens_template = dens_template, dof = dof[k])
@@ -959,8 +914,6 @@ tpred_allmissing <- function(Ytilde = NULL, muhat = NULL, Sighat = NULL, dof = N
 #'
 summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2), ...){
 
-  ## gets the "category probability samples" for a particular ytilde
-  #X <- object$Zdist[[index]]
   X <- as.data.frame(object$epz[index , , drop = FALSE])
   cat_names <- colnames(X)
 
@@ -980,16 +933,15 @@ summary.BayesECMpred <- function(object, index = 1, category = 1, C = 1 - diag(2
     stop("Supplied argument 'category' must be an integer or character string which provides the index or names the category of interest.  Typically 'category' corresponds to the name used to specify detonations.")
   }
 
-  ## Now the samples are for a particular category too
-  #cat_samples <- X[category,]
+
   cat_samples <- X[category]
-## and the other categories
+
   else_samples <- X[,-which(category == dimnames(X)[[2]]) ,drop = FALSE]
-## are grouped together
+
   else_samples <- rowSums(else_samples)
-## Were going to replicate some of them?
+
   Xall <- cbind(X,else_samples)
-  ## And reorder them in a specific way to make sure everything is good
+
   reorder <- c(cat_index, ncol(Xall), (1:(ncol(Xall)-1))[-cat_index])
   Xall <- Xall[,reorder]
 
@@ -1174,6 +1126,23 @@ cat(paste0("Decision Criterion: select ", category, " if E[p(", category, ")] ",
 #'
 #' The dimension of matrix `C` specifies the categorization type.  A dimension of 2 is binary categorization, with the first column and row always corresponding to the category chosen as the `vic` argument.  Otherwise, when the dimension of `C` is equal to the number of categories, the indices of the rows and columns of `C` are in the same order as the categories listed for `names(bayes_pred$BayesECMfit$Y)`.
 #'
+#' @examples
+#'
+#' csv_use <- "good_training.csv"
+#' file_path <- system.file("extdata", csv_use, package = "ezECM")
+#' training_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
+#'
+#' trained_model <- BayesECM(Y = training_data, BT = c(10,1000))
+#'
+#' csv_use <- "good_newdata.csv"
+#' file_path <- system.file("extdata", csv_use, package = "ezECM")
+#' new_data <- import_pvals(file = file_path, header = TRUE, sep = ",", training = TRUE)
+#'
+#' bayespred <- predict(trained_model,  Ytilde = new_data)
+#'
+#' accuracy <- becm_decision(bayes_pred = bayespred, vic = "explosion", cat_truth = new_data$event)
+#'
+#'
 #' @export
 #'
 becm_decision <- function(bayes_pred = NULL, vic = NULL, cat_truth = NULL, alphatilde = 0.05, pn = TRUE, C = matrix(c(0,1,1,0), ncol = 2), rej = NULL){
@@ -1249,20 +1218,7 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
   dof <- N + nu - p + 1
 
 
-
-
-  ## Steps
-
-  ### 1) Find if there is a larger probability that the very importantant cateogory (vic) index, or the remaining indices
-
   if(nrow(C) == 2){
-    ## reduces the probabilities into two groups from K groups for binary detection
-  # pAB <- do.call("rbind", sapply(bayes_pred$epz, function(X,v){
-  #   x <- rep(NA, times = 2)
-  #   x[1] <- X[which(names(X) == v)]
-  #   x[2] <- sum(X[which(names(X) != v)])
-  #   return(x)
-  # }, v = vic, simplify = FALSE))
 
   pAB <- t(apply(bayes_pred$epz, 1, function(X,v){
       x <- rep(NA, times = 2)
@@ -1283,31 +1239,17 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
   }
   }else{
 
-    ## This takes the expectation of Z, for no missing data
-    Zdist_missing <- bayes_pred$epz #t(sapply(bayes_pred$epz, function(X){X}))
 
-    ## And computes expected loss
+    Zdist_missing <- bayes_pred$epz
     Eloss <-  as.matrix(Zdist_missing) %*% C
-
-    ## Finds minimum expected loss
     minEloss <- apply(Eloss, 1, which.min)
-
     vicindex <- which(names(Zdist_missing[1,]) == vic)
-
     vicminEloss <- (minEloss == which(names(Zdist_missing[1,]) == vic))
-
     pcat <- rep("b", times = nrow(Ytilde))
     pcat[vicminEloss] <- "a"
-
     minEloss_char <- names(Zdist_missing[1,])[minEloss]
 
 }
-  ## old code: returns "a" for max probability of vic, and "b" for other categories
-  #pcat <- c("a", "b")[apply(pAB, 1, which.max)]
-
-  ## Scenarios for full training data
-  ### ytilde has some missing quantities
-  ### all ytilde are observed
 
   if(is.null(rej)){
     rej <- matrix(NA, ncol = K, nrow = nrow(Ytilde))
@@ -1373,7 +1315,6 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
           y <- (X - m)
           Siy <- solve(S,y)
           tySiy <- t(y) %*% Siy
-          #tySiy <- (tySiy + t(tySiy))/2
           return(tySiy/ptilde)
         }, S = Sighat, ptilde = p, m = muhat)
 
@@ -1387,44 +1328,40 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
 
 
     }else{
-      ## Need to code up what to do if all ytilde are missing the same discriminant
-
-      ## Logic to get to this point:
-      ### If the training data does not have any missing elements{
-      #### If all ytilde are missing the same discriminant{
-      ##### If there is no ytilde that is fully observed{
-      ###### HERE WE ARE
-      #####}
-      ####}
-     ###}
 
       ptilde <- p - length(bayes_pred$umissing[[1]])
+
+      for(k in 1:K){
+
+      Sighat[UT_template] <- bayes_pred$BayesECMfit$MCMC$SighatN[[k]]
+      Sighat[LT_template] <- t(Sighat)[LT_template]
+
+      muhat <- bayes_pred$BayesECMfit$MCMC$predmean[[k]]
 
       muuse <- muhat[-bayes_pred$umissing[[1]], drop = FALSE]
       Siguse <- Sighat[-bayes_pred$umissing[[1]], -bayes_pred$umissing[[1]], drop = FALSE]
 
-      pvals[1] <- apply(Ytilde[ind,-bayes_pred$umissing[[1]], drop = FALSE], 1, function(X,S, ptil, m){
+      pvals <- apply(Ytilde[,-bayes_pred$umissing[[1]], drop = FALSE], 1, function(X,S, ptil, m){
         y <- (X - m)
         Siy <- solve(S,y)
         tySiy <- t(y) %*% Siy
-        #tySiy <- (tySiy + t(tySiy))/2
         return(tySiy/ptil)
       }, S = Siguse, ptil = ptilde, m = muuse)
 
-      pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
+      pvals <- stats::pf(pvals*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
 
       rej[,k] <- pvals < alphatilde
-      #stop("The current version of ezECM does not support use of this functionality when an entire discriminant is missing from the whole of the training data of a category, but no other data is missing.  Please get in contact (skoermer <at> lanl.gov) if you are recieving this error for your application.")
-    }
+
+      }
+      }
   }
-    ### End if statement related to is.null(rej)
+
 }
 
 
   for(i in 1:length(pcat)){
     if(pcat[i] == "a"){
-      #if(rej[i,which(names(bayes_pred$Zdist[[1]]) == vic)]){
       if(rej[i,which(colnames(bayes_pred$epz) == vic)]){
         pcat[i] <- "b"
         if(nrow(C) > 2){
@@ -1433,14 +1370,6 @@ becm_decision_fulltraining <- function(bayes_pred = NULL, alphatilde = NULL, vic
       }
     }
   }
-
-  ### 2)  Compute the typicality index
-  ### 3a) If p(vic) < p(not vic) declare not a detonation
-  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alphatilde
-  ### 3c) If not rejected, declare a detonation
-  ### 3d) If rejected, declare not a detonation
-  ### 3e) If rejected from all categories, declare an outlier wrt the training data
-
 
   true_group <- cat_truth
   true_group[which(cat_truth != vic)] <- "b"
@@ -1513,19 +1442,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
   Sighat <- matrix(NA, ncol = p, nrow = p)
   dof <- N + nu - p + 1
 
-
-
-
-
-  ## Steps
-
-  ## Find the approximate expected probability of each category using the mean
-
-
-  # Zdist_missing <- t(sapply(bayes_pred$Zdist, function(X){
-  #   apply(X,1,mean)
-  # }))
-
   Zdist_missing <-bayes_pred$epz
 
   if(nrow(C) == 2){
@@ -1561,13 +1477,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
 
   }
 
-  ## Old code, see other function
-  #pcat <- c("a", "b")[apply(pAB, 1, which.max)]
-
-  ## Scenarios for missing training data
-  ### ytilde has some missing quantities
-  ### all ytilde are observed
-  # if(length(bayes_pred$umissing) != 1){
 
   if(is.null(rej)){
     rej <- matrix(NA, ncol = K, nrow = nrow(Ytilde))
@@ -1596,7 +1505,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
             return(tySiy/ptil)
           }, S = Sighat, ptil = ptilde, m = muhat)
 
-          # Is df1 p or ptilde??...pretty sure ptilde
           pvals[ind] <- stats::pf(pvals[ind]*dof[k], df1 = ptilde, df2 = dof[k], log.p = FALSE, lower.tail = FALSE)
 
         }else{
@@ -1611,7 +1519,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
             y <- (X - m)
             Siy <- solve(S,y)
             tySiy <- t(y) %*% Siy
-            #tySiy <- (tySiy + t(tySiy))/2
             return(tySiy/ptil)
           }, S = Siguse, ptil = ptilde, m = muuse)
 
@@ -1660,7 +1567,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
               y <- (X - m)
               Siy <- solve(S,y)
               tySiy <- t(y) %*% Siy
-              #tySiy <- (tySiy + t(tySiy))/2
               return(tySiy/ptil)
             }, S = Siguse, ptil = ptilde, m = muuse)
 
@@ -1693,13 +1599,6 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
       }
     }
   }
-
-  ### 2)  Compute the typicality index
-  ### 3a) If p(vic) < p(not vic) declare not a detonation
-  ### 3b) If p(vic) >= p(not vic) compute typicality wrt vic, and reject if < alphatilde
-  ### 3c) If not rejected, declare a detonation
-  ### 3d) If rejected, declare not a detonation
-  ### 3e) If rejected from all categories, declare an outlier wrt the training data
 
   true_group <- cat_truth
   true_group[which(cat_truth != vic)] <- "b"
@@ -1742,160 +1641,3 @@ becm_decision_missingtraining <- function(bayes_pred = NULL, alphatilde = NULL, 
   return(list(results= out, rej = rej))
 
 }
-
-
-
-
-
-#
-#
-#
-#
-#
-#
-# datagen_blockcov <- function(K = 3, p = NULL, Ntrain = NULL, Ntrain_missing = NULL, Ntest = NULL, tst_missing = NULL, trn_missing = NULL){
-#
-#   mu_use <- matrix(rnorm(n = p*3, sd = 0.5), ncol = K, nrow = p)
-#
-#   Y <- list()
-#
-#   N <- LaplacesDemon::rcat(n = Ntest + Ntrain + Ntrain_missing, p = rep(1/3, times = K))
-#
-#   N <- as.vector(table(N))
-#
-#   vic <- sample(1:K, size = 1)
-#
-#   for(k in 1:K){
-#
-#     nblocks <- sample(1:2, size = 1)
-#
-#     S[[k]] <- LaplacesDemon::rinvwishart(nu = wish_dof(p), S = diag(p))
-#
-#     if(nblocks == 2){
-#       nblock1 <- sample(1:(p-1), size = 1)
-#       block1_members <- sample(1:p, size = nblock1, replace = FALSE)
-#       block2_members <- (1:p)[-block1_members]
-#
-#       zero_elements <- expand.grid(block1_members, block2_members)
-#
-#       S[[k]][zero_elements$Var1, zero_elements$Var2] <- 0
-#       S[[k]][zero_elements$Var2, zero_elements$Var1] <- 0
-#
-#     }
-#
-#
-#     Y[[k]] <- as.data.frame(LaplacesDemon::rmvn(n = N[k], mu = mu_use[,k], Sigma= S[[k]]))
-#     Ytemp<- 1/(1+ exp(-Y[[k]]))
-#
-#     if(max(apply(Ytemp,2,function(X){range(X)})) == 1){
-#       stop()
-#     }else{
-#       Y[[k]]<- 1/(1+ exp(-Y[[k]]))
-#     }
-#
-#
-#     Y[[k]] <- cbind(Y[[k]], as.character(k))
-#     names(Y[[k]]) <- c(paste("p",as.character(1:p),  sep = ""), "event")
-#
-#   }
-#
-#   Y <- do.call("rbind", Y)
-#
-#   test_index <- sample(1:nrow(Y), size = Ntest)
-#
-#   testing <- Y[test_index,]
-#   training <- Y[-test_index, ]
-#   train_full_index <- sample(1:nrow(training), size = Ntrain)
-#   train_missing <- training[-train_full_index, ]
-#   training <- training[train_full_index, ]
-#
-#   if(any(table(training$event) <= 1) | length(table(training$event)) <= (K-1)){
-#     while(any(table(training$event) <= 1 | length(table(training$event)) <= (K-1))){
-#       test_index <- sample(1:nrow(Y), size = Ntest)
-#
-#       testing <- Y[test_index,]
-#       training <- Y[-test_index, ]
-#       train_full_index <- sample(1:nrow(training), size = Ntrain)
-#       train_missing <- training[-train_full_index, ]
-#       training <- training[train_full_index, ]
-#     }
-#   }
-#
-#
-#   test_truth <- testing$event
-#   testing$event <- NULL
-#
-#   ## Random selection of testing entries to be missing
-#
-#   abs_present <- sample(size = Ntest, 1:p, replace = TRUE)
-#
-#   missing_pool <- matrix(1:p, ncol = p, nrow = Ntest, byrow = TRUE)
-#
-#   missing_pool <- t(apply(cbind(missing_pool, abs_present), 1, function(X,pp){
-#     X[-c(X[pp + 1], pp +1)]
-#   }, pp = p))
-#
-#   missing_pool_save <- missing_pool
-#
-#   #frac_left <- trn_missing*(p)/(p + 1)
-#   frac_missing <- (p*tst_missing)/(p-1)
-#
-#   # sample which of the remaining elements will be missing
-#   missing_sample <- sample(1:(nrow(missing_pool)*ncol(missing_pool)), size = floor(nrow(missing_pool)*ncol(missing_pool)*(frac_missing)), replace = FALSE)
-#
-#   missing_pool_save[missing_sample] <- NA
-#
-#   saved_data <- apply(cbind(missing_pool_save, unname(abs_present)), 1, function(X){
-#     X[-which(is.na(X))]
-#   })
-#
-#   for(j in 1:nrow(testing)){
-#     testing[j,-c(saved_data[[j]])] <- NA
-#   }
-#
-#   ### Random selection of training data that has missing entries
-#
-#   if(!is.null(Ntrain_missing)){
-#     if(Ntrain_missing != 0 ){
-#       abs_present <- sample(size = Ntrain_missing, 1:p, replace = TRUE)
-#       abs_missing <- matrix(1:p, ncol = p, nrow = Ntrain_missing, byrow = TRUE)
-#
-#       abs_missing <- t(apply(cbind(abs_missing, abs_present), 1, function(X,pp){
-#         X[-c(X[pp + 1], pp +1)]
-#       }, pp = p))
-#
-#       abs_missing <- apply(abs_missing, 1, function(X){
-#         sample(X, size = 1)
-#       })
-#
-#       missing_pool <- matrix(1:p, ncol = p, nrow = Ntrain_missing, byrow = TRUE)
-#
-#       missing_pool <- t(apply(cbind(missing_pool, abs_present, abs_missing), 1, function(X,pp){
-#         X[-c(X[pp + 1], X[pp + 2], pp +1, pp + 2)]
-#       }, pp = p))
-#
-#       missing_pool_save <- missing_pool
-#
-#       #frac_left <- trn_missing*(p)/(p + 1)
-#       frac_missing <- (p*trn_missing - 1)/(p-2)
-#
-#       # sample which of the remaining elements will be missing
-#       missing_sample <- sample(1:(nrow(missing_pool)*ncol(missing_pool)), size = floor(nrow(missing_pool)*ncol(missing_pool)*(frac_missing)), replace = FALSE)
-#
-#
-#       missing_pool_save[missing_sample] <- NA
-#
-#       saved_data <- apply(cbind(missing_pool_save, unname(abs_present)), 1, function(X){
-#         X[-which(is.na(X))]
-#       })
-#
-#       for(j in 1:nrow(train_missing)){
-#         train_missing[j,-c(saved_data[[j]], p+1)] <- NA
-#       }
-#     }
-#   }
-#   return(list(training = training, train_missing = train_missing, testing = testing, test_truth = test_truth))
-#
-# }
-#
-#

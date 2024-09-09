@@ -18,6 +18,7 @@
 #' @param training Logical indicating if the supplied `*.csv` file is to be used as training data.  Only serves to suppress warnings.
 #'
 #' @return A [base::data.frame()] of p-values with each row corresponding to a single event and each column corresponding to a particular discriminant.  If data labels are correctly provided in the supplied `*.csv` file, an additional column labeled `event` will hold these values.
+#'
 #' @export
 #'
 #' @importFrom utils read.csv
@@ -103,6 +104,21 @@ return(dat)
 #' @return Saves file or imports file into global environment.
 #' @export
 #'
+#' @examples
+#'
+#' x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
+#' pval_cat <- cECM(x = x, transform = TRUE)
+#'
+#' export_ecm(x = pval_cat, file = "example-ecm.rda")
+#'
+#' reload_pval_cat <- import_ecm(file = "example-ecm.rda")
+#'
+#' ## The below code shouldn't be used,
+#' ## it deletes the file created during the example
+#'
+#' unlink("example-ecm.rda")
+#'
+#'
 #'
 export_ecm <- function(x = NULL, file = stop("'file' must be specified")){
 
@@ -126,16 +142,3 @@ import_ecm <- function(file = NULL){
 
 }
 #'
-#' @examples
-#'
-#' x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
-#' pval_cat <- cECM(x = x, transform = TRUE)
-#'
-#' export_ecm(x = pval_cat, file = "example-ecm.rda")
-#'
-#' reload_pval_cat <- import_ecm(file = "example-ecm.rda")
-#'
-#' ## The below code shouldn't be used,
-#' ## it deletes the file created during the example
-#'
-#' unlink("example-ecm.rda")

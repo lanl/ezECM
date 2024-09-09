@@ -4,7 +4,7 @@
 \alias{plot.cECM}
 \title{Plot the data and output of \code{\link[=cECM]{cECM()}} categorization}
 \usage{
-\method{plot}{cECM}(x, discriminants = c(1, 2), thenull = NULL, alphatilde = 0.95, ...)
+\method{plot}{cECM}(x, discriminants = c(1, 2), thenull = NULL, alphatilde = 0.05, ...)
 }
 \arguments{
 \item{x}{an object of which is of class \code{"cECM"}, retrieved from the output of the \code{\link[=cECM]{cECM()}} function.  The \code{"cECM"} object may or may not contain unlabeled data.}
@@ -13,7 +13,7 @@
 
 \item{thenull}{character string or \code{NULL}.  When unlabeled data is found within an \code{"cECM"} object, the name of one of the event categories can be provided as this argument.  When \code{"thenull"} is provided, unlabled data where the category hypothesis is rejected is colored red.}
 
-\item{alphatilde}{numeric value specifying hypothesis testing significance level.  Used in conjunction with \code{thenull}, aggregate p-values less than \code{1-alphatilde} are rejected and colored accordingly.}
+\item{alphatilde}{numeric value specifying hypothesis testing significance level.  Used in conjunction with \code{thenull}, aggregate p-values less than \code{alphatilde} are rejected and colored accordingly.}
 
 \item{...}{arguments passed to \code{\link[base:plot]{base::plot()}}}
 }
@@ -29,4 +29,21 @@ The plot generated from plot.ecm() is first dependent on if the provided \code{x
 If unlabled data is not part of the \code{"cECM"} object, the labled data is simply plotted with the 0.68 and 0.95 confidence levels obtained from the distribution fits returned from \code{\link[=cECM]{cECM()}}.
 
 If unlabled data \emph{\strong{is}} part of the \code{"cECM"} object, the unlabled data is plotted in addition to the distribution plots.  Each unlabled data point appears on the plot as an integer, which indexes the corresponding row of \code{x$newdata}.
+}
+\examples{
+
+x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
+s <- sample(1:20, size = 2)
+
+newdata <- x[s,]
+newdata <- newdata[,-which(names(newdata) == "event")]
+
+x <- x[-s,]
+
+pval_cat <- cECM(x = x, transform = TRUE)
+
+pval_cat <- cECM(x = pval_cat, newdata = newdata)
+
+plot(x = pval_cat, thenull = "explosion")
+
 }

@@ -9,7 +9,7 @@
 #' @param x an object of which is of class `"cECM"`, retrieved from the output of the [cECM()] function.  The `"cECM"` object may or may not contain unlabeled data.
 #' @param discriminants character or integer vector of length two.  If a character vector is provided, the character strings must match a subset of the column names for the training data, ie. `all(discriminants %in% names(x$x))` must be true.  If an integer vector is given, the elements of the vector select the column indices of the data to be plotted.
 #' @param thenull character string or `NULL`.  When unlabeled data is found within an `"cECM"` object, the name of one of the event categories can be provided as this argument.  When `"thenull"` is provided, unlabled data where the category hypothesis is rejected is colored red.
-#' @param alphatilde numeric value specifying hypothesis testing significance level.  Used in conjunction with `thenull`, aggregate p-values less than `1-alphatilde` are rejected and colored accordingly.
+#' @param alphatilde numeric value specifying hypothesis testing significance level.  Used in conjunction with `thenull`, aggregate p-values less than `alphatilde` are rejected and colored accordingly.
 #' @param ... arguments passed to [base::plot()]
 #'
 #' @details
@@ -23,6 +23,22 @@
 #' @return Plot illustrating results of [cECM()]
 #' @export
 #'
+#' @examples
+#'
+#' x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
+#' s <- sample(1:20, size = 2)
+#'
+#' newdata <- x[s,]
+#' newdata <- newdata[,-which(names(newdata) == "event")]
+#'
+#' x <- x[-s,]
+#'
+#' pval_cat <- cECM(x = x, transform = TRUE)
+#'
+#' pval_cat <- cECM(x = pval_cat, newdata = newdata)
+#'
+#' plot(x = pval_cat, thenull = "explosion")
+#'
 #' @importFrom grDevices hcl.colors
 #' @importFrom graphics points lines par legend text
 #' @importFrom ellipse ellipse
@@ -30,7 +46,10 @@
 #'
 #' @method plot cECM
 #'
-plot.cECM <- function(x, discriminants = c(1,2), thenull = NULL, alphatilde = 0.95,...){
+plot.cECM <- function(x, discriminants = c(1,2), thenull = NULL, alphatilde = 0.05,...){
+
+
+    alphatilde <- 1-alphatilde
 
     ## Ensuring par settings are not changed upon exit
     opar <- graphics::par(no.readonly = TRUE)
@@ -162,9 +181,12 @@ plot.cECM <- function(x, discriminants = c(1,2), thenull = NULL, alphatilde = 0.
 
           failed <- which(x$cECM[, thenull] < 1-alphatilde)
 
+          if(length(failed) != nrow(x$cECM)){
           graphics::text(newdata.filled[-failed, discriminants[1]], newdata.filled[-failed, discriminants[2]], labels = (1:nrow(x$newdata))[-failed], adj = c(0.5, 0.5))
+            }
+          if(length(failed) != 0){
           graphics::text(newdata.filled[failed, discriminants[1]], newdata.filled[failed, discriminants[2]], labels = (1:nrow(x$newdata))[failed], adj = c(0.5, 0.5), col = "red")
-
+            }
           graphics::par(xpd = TRUE)
           legend.loc <- graphics::legend("topright", inset=c(-0.32,0), legend= c(unique(x$x$event), paste0("H0: ", thenull),   "Rejected", "Failed to\nReject"),
                            pch=c(rep(19, times = length(unique(x$x$event))), NA, 49, 50), col = c(cols.use, "black", "red", "black"),

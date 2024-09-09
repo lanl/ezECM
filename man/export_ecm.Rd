@@ -22,3 +22,20 @@ Saves file or imports file into global environment.
 
 \code{import_ecm()} loads a previously exported ECM model into the global environment.
 }
+\examples{
+
+x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
+pval_cat <- cECM(x = x, transform = TRUE)
+
+export_ecm(x = pval_cat, file = "example-ecm.rda")
+
+reload_pval_cat <- import_ecm(file = "example-ecm.rda")
+
+## The below code shouldn't be used,
+## it deletes the file created during the example
+
+unlink("example-ecm.rda")
+
+
+
+}
