@@ -8,7 +8,8 @@
 # ezECM
 
 Install `ezECM` from RStudio using
-`remotes::install_github("lanl/ezECM")`.
+`remotes::install_github("lanl/ezECM")`. Package is currently finishing
+development and testing before submission to CRAN
 
 O# O4721
 

@@ -1,6 +1,6 @@
 Package: ezECM
 Title: Event Categorization Matrix Classifiation for Nuclear Detonations
-Version: 0.0.1.0000
+Version: 1.0.0
 Authors@R: 
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-0325-7034"))
@@ -8,7 +8,7 @@ Description: Implementation of an Event Categorization Matrix (ECM) detonation d
 License: GPL (>= 3) + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Suggests: 
     knitr,
     rmarkdown,
