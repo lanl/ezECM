@@ -5,7 +5,7 @@ Authors@R:
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-0325-7034"))
 Description: Implementation of an Event Categorization Matrix (ECM) detonation detection model and a Bayesian variant.
-License: GPL (>= 3) + file LICENSE
+License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
