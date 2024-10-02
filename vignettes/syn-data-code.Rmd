@@ -580,7 +580,7 @@ pltcols <- hcl.colors(44, palette = "viridis", rev = TRUE)[c(3, 10, 20, 30, 37)]
   }
 }
    
-opar <- par()
+opar <- par(no.readonly = TRUE)
 on.exit(expr = suppressWarnings(par(opar)))
 par(mar = c(4.25,3.85,1,0.5))
 lmodels <- length(models)

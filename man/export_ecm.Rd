@@ -5,14 +5,16 @@
 \alias{import_ecm}
 \title{Saving and loading fitted ECM models}
 \usage{
-export_ecm(x = NULL, file = stop("'file' must be specified"))
+export_ecm(x = NULL, file = stop("'file' must be specified"), verb = TRUE)
 
-import_ecm(file = NULL)
+import_ecm(file = NULL, verb = TRUE)
 }
 \arguments{
 \item{x}{Name of ECM model to be exported. \code{class(x)} should be either \code{"cECM"} or \code{"BayesECM"}.}
 
 \item{file}{Character string containing absolute or relative path of \verb{*.rda} file to be exported or imported.}
+
+\item{verb}{Logical indicating if a message indicating success should be printed to the console.}
 }
 \value{
 Saves file or imports file into global environment.
@@ -27,7 +29,7 @@ Saves file or imports file into global environment.
 x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
 pval_cat <- cECM(x = x, transform = TRUE)
 
-export_ecm(x = pval_cat, file = "example-ecm.rda")
+export_ecm(x = pval_cat, file = "example-ecm.rda", verb = FALSE)
 
 reload_pval_cat <- import_ecm(file = "example-ecm.rda")
 

@@ -100,6 +100,7 @@ return(dat)
 #'
 #' @param x Name of ECM model to be exported. `class(x)` should be either `"cECM"` or `"BayesECM"`.
 #' @param file Character string containing absolute or relative path of `*.rda` file to be exported or imported.
+#' @param verb Logical indicating if a message indicating success should be printed to the console.
 #'
 #' @return Saves file or imports file into global environment.
 #' @export
@@ -109,7 +110,7 @@ return(dat)
 #' x <- pval_gen(sims = 20, pwave.arrival = list(optim.starts = 5))
 #' pval_cat <- cECM(x = x, transform = TRUE)
 #'
-#' export_ecm(x = pval_cat, file = "example-ecm.rda")
+#' export_ecm(x = pval_cat, file = "example-ecm.rda", verb = FALSE)
 #'
 #' reload_pval_cat <- import_ecm(file = "example-ecm.rda")
 #'
@@ -120,22 +121,28 @@ return(dat)
 #'
 #'
 #'
-export_ecm <- function(x = NULL, file = stop("'file' must be specified")){
+export_ecm <- function(x = NULL, file = stop("'file' must be specified"), verb = TRUE){
 
 
   save(x, file = file)
-  print(paste0("File: '", file, "' successfully saved."))
+  if(verb){
+  cat("File: '", file, "' successfully saved.")
+  }
 
 }
 #' @rdname export_ecm
 #' @export
-import_ecm <- function(file = NULL){
+import_ecm <- function(file = NULL, verb = TRUE){
 
   if(file.exists(file)){
     temp_load <- load(file)
-    print("File successfully loaded")
+    if(verb){
+    message("File successfully loaded")
+    }
   }else{
-    print("Cannot find file.  Check name and ensure the correct working directory is being used.")
+    if(verb){
+    message("Cannot find file.  Check name and ensure the correct working directory is being used.")
+    }
   }
 
   return(temp_load)

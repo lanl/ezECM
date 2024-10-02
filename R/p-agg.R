@@ -118,11 +118,6 @@ cECM <- function(x, newdata = NULL, rda_params = NULL, transform = TRUE){
 
         Sig.use <- Sig[na.index, na.index, drop = FALSE]
 
-        # A <- diag(length(mu))
-        # A <- A[na.index, , drop = FALSE]
-        #
-        # Sig.use <- A %*% Sig %*% t(A)
-
 
 
         ldet <- determinant(Sig.use, logarithm = TRUE)$modulus

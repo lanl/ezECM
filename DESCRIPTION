@@ -4,7 +4,7 @@ Version: 1.0.0
 Authors@R: 
     person("Scott", "Koermer", , "skoermer@lanl.gov", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-0325-7034"))
-Description: Implementation of an Event Categorization Matrix (ECM) detonation detection model and a Bayesian variant.  Functions are provided for importing and exporting data, fitting models, and applying decision criteria for categorizing new events.
+Description: Implementation of an Event Categorization Matrix (ECM) detonation detection model and a Bayesian variant. Functions are provided for importing and exporting data, fitting models, and applying decision criteria for categorizing new events. Methods described in Koermer et al. (2024) <[https://arxiv.org/pdf/2409.18227]https://arxiv.org/pdf/2409.18227>.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
