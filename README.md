@@ -10,6 +10,10 @@
 Install `ezECM` from RStudio using
 `remotes::install_github("lanl/ezECM")`.
 
+# dev folder
+
+Code within the dev folder is not accessible directly via package installation and loading
+
 O# O4721
 
 © 2024. Triad National Security, LLC. All rights reserved.
